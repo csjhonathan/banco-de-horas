@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    image: banco-de-horas
+    ports:
+      # host:container — mude APP_PORT no .env se a 3000 estiver ocupada.
+      - "${APP_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      # o app SEMPRE escuta 3000 dentro do container (o mapeamento acima
+      # cuida da porta do host).
+      PORT: 3000
+      # dentro da rede do compose o Mongo local atende em "mongo".
+      # Se voce setar MONGO_URI no .env (ex.: Atlas), ele tem prioridade.
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/banco_de_horas}
+    restart: unless-stopped
+
+  # Mongo local — util se voce NAO for usar o Atlas.
+  # Usando Atlas: coloque a connection string em MONGO_URI no .env e
+  # suba so o app com:  docker compose up --build app
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

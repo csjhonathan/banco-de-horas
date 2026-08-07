@@ -1,0 +1,20 @@
+{
+  "name": "banco-de-horas",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Banco de horas fullstack (Node + Express + MongoDB) com integracao Clockify de mao dupla.",
+  "type": "commonjs",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongodb": "^6.8.0"
+  }
+}

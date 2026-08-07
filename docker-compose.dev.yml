@@ -1,0 +1,18 @@
+# Override de desenvolvimento — hot reload.
+# Use junto do compose base:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# (ou simplesmente `make dev`)
+services:
+  app:
+    build: .
+    # nodemon em modo polling (--legacy-watch): o inotify do Docker no WSL2
+    # nao propaga eventos de bind mount de forma confiavel, entao o polling
+    # garante o restart ao salvar qualquer arquivo do server.
+    command: sh -c "npm install -g nodemon --silent && nodemon --legacy-watch --watch server --ext js,json server/index.js"
+    environment:
+      NODE_ENV: development
+    volumes:
+      # monta o codigo pra o container ver as mudancas na hora.
+      # o server reinicia sozinho; o front (public) e estatico, e so dar F5.
+      - ./server:/app/server
+      - ./public:/app/public
