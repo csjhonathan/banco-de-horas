@@ -1,0 +1,41 @@
+name: Deploy do front (GitHub Pages)
+
+# Publica a pasta public/ no GitHub Pages (método via Actions — não precisa
+# ser raiz nem /docs). Injeta a URL do backend no config.js a partir da
+# repository variable API_URL (Settings > Secrets and variables > Actions > Variables).
+
+on:
+  push:
+    branches: [main]
+    paths: ['public/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Injeta a URL da API no config.js
+        run: |
+          echo "window.API_URL=\"${{ vars.API_URL }}\";" > public/config.js
+          echo "config.js gerado:"; cat public/config.js
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -287,6 +287,7 @@
   }
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<script src="config.js"></script>
 </head>
 <body>
 
@@ -485,8 +486,10 @@ const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 /* ------------------------------------------------------------------ */
 /*  camada de API                                                     */
 /* ------------------------------------------------------------------ */
+// base da API: vem de window.API_URL (config.js). Vazio = mesma origem.
+const API_URL = (window.API_URL || "").replace(/\/+$/, "");
 async function jfetch(url, opts){
-  const r = await fetch(url, Object.assign({ headers:{"Content-Type":"application/json"} }, opts||{}));
+  const r = await fetch(API_URL + url, Object.assign({ credentials:"include", headers:{"Content-Type":"application/json"} }, opts||{}));
   let body = null;
   try{ body = await r.json(); }catch(_){}
   if(r.status === 401){ const e = new Error((body&&body.error)||"nao autenticado"); e.status=401; throw e; }

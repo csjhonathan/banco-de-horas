@@ -19,6 +19,30 @@ const DEFAULT_TZ = process.env.DEFAULT_TZ || 'America/Sao_Paulo';
 
 app.set('trust proxy', true); // respeita x-forwarded-proto (ngrok/proxy)
 app.use(express.json({ limit: '4mb' }));
+
+// CORS opcional — só liga se CORS_ORIGIN estiver definido (front em outro domínio).
+// Aceita uma lista separada por vírgula. Necessário para o front no GitHub Pages.
+const CORS_ORIGIN = (process.env.CORS_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
+if (CORS_ORIGIN.length) {
+  app.use((req, res, next) => {
+    const origin = req.get('origin');
+    if (origin && CORS_ORIGIN.includes(origin)) {
+      res.set('Access-Control-Allow-Origin', origin);
+      res.set('Access-Control-Allow-Credentials', 'true');
+      res.set('Vary', 'Origin');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
+}
+
+// Injeta a env API_URL no front (antes do static, pra ganhar do arquivo estático).
+app.get('/config.js', (_req, res) => {
+  res.type('application/javascript').send(`window.API_URL=${JSON.stringify(process.env.API_URL || '')};`);
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 const wrap = (fn) => (req, res) => fn(req, res).catch((err) => {
