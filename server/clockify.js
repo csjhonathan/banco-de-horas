@@ -1,12 +1,12 @@
 'use strict';
 
 /* ------------------------------------------------------------------ *
- *  Integracao Clockify (mao dupla) — credenciais POR USUARIO.        *
+ *  Integracao Clockify (somente leitura) — credenciais POR USUARIO.  *
+ *  O app LE as horas do Clockify; nunca escreve de volta.            *
  *  Toda funcao recebe `creds` = { apiKey, workspaceId, userId, tz }. *
  * ------------------------------------------------------------------ */
 
 const BASE = 'https://api.clockify.me/api/v1';
-const TAG = '[banco-de-horas]';
 const DEFAULT_TZ = process.env.DEFAULT_TZ || 'America/Sao_Paulo';
 
 async function cf(creds, method, pathname, body) {
@@ -127,37 +127,6 @@ async function recomputeDay(creds, day) {
   return { day, seconds: registros[day] || 0 };
 }
 
-async function pushDay(creds, day, seconds) {
-  const { workspace } = ctxOf(creds);
-  const entries = await fetchEntries(creds, day, day);
-
-  const managed = entries.find((e) => (e.description || '').startsWith(TAG));
-  const othersSec = entries
-    .filter((e) => e !== managed)
-    .reduce((a, e) => a + entrySeconds(e), 0);
-
-  const target = Math.max(0, Math.round(seconds) - othersSec);
-
-  if (target <= 0) {
-    if (managed) {
-      await cf(creds, 'DELETE', `/workspaces/${workspace}/time-entries/${managed.id}`);
-      return { action: 'deleted', othersSec, target: 0 };
-    }
-    return { action: 'noop', othersSec, target: 0 };
-  }
-
-  const startIso = `${day}T09:00:00Z`;
-  const endIso = new Date(new Date(startIso).getTime() + target * 1000).toISOString();
-  const body = { start: startIso, end: endIso, description: `${TAG} ajuste manual` };
-
-  if (managed) {
-    await cf(creds, 'PUT', `/workspaces/${workspace}/time-entries/${managed.id}`, body);
-    return { action: 'updated', id: managed.id, othersSec, target };
-  }
-  const created = await cf(creds, 'POST', `/workspaces/${workspace}/time-entries`, body);
-  return { action: 'created', id: created.id, othersSec, target };
-}
-
 function dayFromWebhook(payload, tz) {
   const iso = payload?.timeInterval?.start || payload?.start;
   if (!iso) return null;
@@ -168,8 +137,6 @@ module.exports = {
   verify,
   syncRange,
   recomputeDay,
-  pushDay,
   dayFromWebhook,
   localDate,
-  TAG,
 };

@@ -16,11 +16,10 @@ e mostra o **saldo acumulado** — quanto você está de crédito ou débito, m�
 - **Jornada configurável** (`HH:MM` por dia útil) — serve para 6h/dia, 8h/dia, 44h/semana, etc.
 - **Saldo real** — dia útil que passou sem lançamento conta como **−8h** (débito), então a meta acumulada nunca "infla". Mostra meta do mês, saldo do mês e o que veio acumulado dos meses anteriores.
 - **Feriados & folgas** — já vem com os feriados oficiais de 2026; dá para adicionar/remover.
-- **Clockify de mão dupla:**
+- **Clockify (somente leitura — o app nunca escreve de volta no seu time tracking):**
   - **Importar por período** — modal com presets (hoje, esta semana, este mês, este ano...) ou intervalo custom.
   - **Sincronizar hoje** — um clique puxa o dia atual.
   - **Importar CSV** — aceita o *Relatório de Tempo Detalhado* exportado do Clockify.
-  - **Enviar pro Clockify** — manda o total de um dia de volta (cria uma entrada marcada).
   - **Webhook em tempo real** — self-service pela tela (URL + guia + signing secrets por evento).
 - **Auto-refresh** — a aba pede "hoje" ao backend a cada 1 min e atualiza sozinha (sem atrapalhar o que você está digitando).
 - **Backup / importar / reiniciar** o seu estado (JSON).
@@ -130,7 +129,7 @@ server/
   index.js     rotas Express + boot
   db.js        conexão Mongo (com retry) + acesso por usuário
   auth.js      senha (scrypt) + sessão (cookie assinado) + middleware
-  clockify.js  cliente Clockify (importar / enviar / webhook)
+  clockify.js  cliente Clockify (leitura: importar / sincronizar / webhook)
   seed.js      estado inicial (feriados oficiais 2026) e migração
 public/
   index.html   o app inteiro (HTML/CSS/JS)

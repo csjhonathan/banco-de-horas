@@ -34,7 +34,9 @@
     line-height:1.45;
     -webkit-font-smoothing:antialiased;
     padding:24px 16px 80px;
+    overflow-x:hidden;
   }
+  input,button,textarea,select{max-width:100%}
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
   .wrap{max-width:840px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
   .hidden{display:none!important}
@@ -169,6 +171,7 @@
   tbody tr.missing .daydate{color:var(--muted)}
   .rowbtns{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
   .mini{font-size:11px;font-weight:600;color:var(--faint);background:none;border:none;cursor:pointer;padding:3px 5px;border-radius:6px;white-space:nowrap}
+  .mini .ic{display:none}
   .mini:hover{color:var(--ink);background:var(--paper)}
   .mini.del:hover{color:var(--debit)}
   .mini.cf:hover{color:var(--accent);background:var(--accent-bg)}
@@ -198,11 +201,12 @@
   .feradd input[type=text]{font-family:var(--sans);font-size:13px;padding:9px 11px;border:1px solid var(--hair);border-radius:9px;min-width:180px}
 
   /* Dialog (integração Clockify) */
-  dialog{border:none;border-radius:var(--radius);box-shadow:var(--shadow);padding:0;max-width:460px;width:92vw;color:var(--ink)}
+  dialog{border:none;border-radius:var(--radius);box-shadow:var(--shadow);padding:0;max-width:460px;width:92vw;max-height:90dvh;color:var(--ink);flex-direction:column;overflow:hidden}
+  dialog[open]{display:flex}
   dialog::backdrop{background:rgba(20,26,34,.35)}
-  .dlg-h{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--hair)}
+  .dlg-h{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--hair);flex:none}
   .dlg-h h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-  .dlg-b{padding:20px 22px;display:flex;flex-direction:column;gap:6px}
+  .dlg-b{padding:20px 22px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1 1 auto}
   .dlg-b label{font-size:11px;font-weight:600;color:var(--muted);margin-top:10px}
   .dlg-b input{width:100%;font-family:var(--sans);font-size:14px;padding:10px 12px;border:1px solid var(--hair);border-radius:9px}
   .dlg-b input:focus{outline:none;border-color:var(--accent)}
@@ -232,7 +236,7 @@
   .secst.no{color:var(--faint)}
   .dlg-msg{font-size:12px;font-weight:600;min-height:16px}
   .dlg-msg.err{color:var(--debit)} .dlg-msg.ok{color:var(--credit)}
-  .dlg-f{display:flex;gap:10px;justify-content:space-between;padding:16px 22px;border-top:1px solid var(--hair);flex-wrap:wrap}
+  .dlg-f{display:flex;gap:10px;justify-content:space-between;padding:16px 22px;border-top:1px solid var(--hair);flex-wrap:wrap;flex:none}
   .preset-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
   .preset-grid button{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--muted);background:var(--surface);border:1px solid var(--hair);border-radius:9px;padding:9px 10px;cursor:pointer;text-align:left}
   .preset-grid button:hover{border-color:var(--faint);color:var(--ink)}
@@ -252,6 +256,34 @@
     .brand span{display:none}
     .topbar{gap:8px}
     .tools{width:100%;justify-content:flex-start}
+    /* formulário de lançamento: campos e botões ocupam a largura e quebram bem */
+    .logform{gap:10px}
+    .logform .field{flex:1 1 140px}
+    .logform .time-in{width:100%;justify-content:center}
+    .logform .btn{flex:1 1 auto;text-align:center}
+    /* tabela cabe sem scroll lateral: sem min-width, padding/fonte menores */
+    table{min-width:0}
+    thead th{padding:10px 12px}
+    tbody td{padding:11px 12px;font-size:13px}
+    .daysem{margin-left:6px}
+    .badge{margin-left:6px}
+    /* ações viram ícones compactos (economiza muito espaço) */
+    .rowbtns{gap:2px}
+    .mini{padding:5px 7px;font-size:15px;line-height:1}
+    .mini .lb{display:none}
+    .mini .ic{display:inline}
+  }
+  @media(max-width:460px){
+    .stats{grid-template-columns:1fr 1fr}
+    .imp-range{flex-direction:column;gap:8px}
+    .dlg-h,.dlg-b,.dlg-f{padding-left:16px;padding-right:16px}
+    .secitem span{width:64px}
+    .dlg-f{justify-content:stretch}
+    .dlg-f .btn{flex:1 1 auto}
+    /* esconde a coluna Meta (sempre 08:00:00/—) */
+    .metacol{display:none}
+    thead th{padding:9px 8px;font-size:9px}
+    tbody td{padding:11px 8px;font-size:12px}
   }
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -276,7 +308,7 @@
       <button class="btn primary" id="auSubmit" type="submit" style="width:100%;margin-top:8px">Entrar</button>
     </form>
   </div>
-  <div class="foot">Node + Express + MongoDB · integração Clockify de mão dupla · v2.1</div>
+  <div class="foot">Node + Express + MongoDB · integração com o Clockify · v2.1</div>
 </div>
 
 <!-- ====================== APP ====================== -->
@@ -473,7 +505,6 @@ const API = {
   cfSave:        (b)     => jfetch("/api/clockify/config",{method:"PUT", body:JSON.stringify(b)}),
   cfRemove:      ()      => jfetch("/api/clockify/config",{method:"DELETE"}),
   cfSync:        (b)     => jfetch("/api/clockify/sync",  {method:"POST", body:JSON.stringify(b||{})}),
-  cfPush:        (date)  => jfetch("/api/clockify/push",  {method:"POST", body:JSON.stringify({date})}),
 };
 
 /* ------------------------------------------------------------------ */
@@ -687,7 +718,7 @@ function renderMonth(){
   const table = `
     <div class="tablewrap"><table>
       <thead><tr>
-        <th>Dia</th><th class="r">Trabalhado</th><th class="r">Meta</th><th class="r">Saldo</th><th class="r"></th>
+        <th>Dia</th><th class="r">Trabalhado</th><th class="r metacol">Meta</th><th class="r">Saldo</th><th class="r"></th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
@@ -711,17 +742,14 @@ function rowHTML(d){
   if(isHoje) badges+=`<span class="badge t">hoje</span>`;
   if(folga) badges+=`<span class="badge f">${isFeriado(d)?'folga':'fim de semana'}</span>`;
   if(!has && util) badges+=`<span class="badge miss">não lançado</span>`;
-  const cfBtn = (has && me && me.clockify && me.clockify.configured)
-    ? `<button class="mini cf" data-push="${d}" title="Enviar este total pro Clockify">→ clockify</button>` : "";
-  const delBtn = has ? `<button class="mini del" data-del="${d}">apagar</button>` : "";
+  const delBtn = has ? `<button class="mini del" data-del="${d}" title="apagar"><span class="ic">✕</span><span class="lb">apagar</span></button>` : "";
   return `<tr class="${isHoje?'today':''} ${folga?'folga':''} ${!has?'missing':''}" data-d="${d}">
     <td><span class="daydate num">${dm(d)}</span><span class="daysem">${SEMANAS[dObj.getDay()]}</span>${badges}</td>
     <td class="r num">${has?toHMS(sec):'—'}</td>
-    <td class="r num" style="color:var(--faint)">${folga?'—':'08:00:00'}</td>
+    <td class="r num metacol" style="color:var(--faint)">${folga?'—':'08:00:00'}</td>
     <td class="r num ${cls(saldo)}">${signed(saldo, false)}</td>
     <td class="r"><div class="rowbtns">
-      ${cfBtn}
-      <button class="mini" data-edit="${d}">${has?'editar':'lançar'}</button>
+      <button class="mini" data-edit="${d}" title="${has?'editar':'lançar'}"><span class="ic">${has?'✎':'＋'}</span><span class="lb">${has?'editar':'lançar'}</span></button>
       ${delBtn}
     </div></td>
   </tr>`;
@@ -800,14 +828,6 @@ function wireForm(){
     const d=b.getAttribute("data-del");
     if(confirm("Apagar o lançamento de "+dm(d)+"?")){ delete db.registros[d]; save2(); }
   });
-  document.querySelectorAll("[data-push]").forEach(b=>b.onclick=async ()=>{
-    const d=b.getAttribute("data-push");
-    if(!confirm("Enviar o total de "+dm(d)+" ("+toHMS(db.registros[d])+") pro Clockify?\n\nCria/ajusta uma entrada marcada [banco-de-horas] pra o dia bater.")) return;
-    const original=b.textContent; b.textContent="enviando…";
-    try{ await API.cfPush(d); b.textContent="✓ enviado"; setTimeout(()=>{ b.textContent=original; }, 1500); }
-    catch(e){ b.textContent=original; alert("Não consegui enviar pro Clockify:\n"+e.message); }
-  });
-
   ["th","tm","ts"].forEach((id,i,arr)=>{
     const el=document.getElementById(id);
     el.addEventListener("input",()=>{

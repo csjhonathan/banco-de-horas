@@ -227,7 +227,8 @@ app.delete('/api/clockify/config', auth.requireAuth, wrap(async (req, res) => {
 }));
 
 /* ------------------------------------------------------------------ *
- *  CLOCKIFY — sync (pull) e push (mao dupla)                         *
+ *  CLOCKIFY — sync (pull). O Clockify e a fonte da verdade; o app     *
+ *  so LE de la (nunca escreve de volta).                             *
  * ------------------------------------------------------------------ */
 
 app.post('/api/clockify/sync', auth.requireAuth, wrap(async (req, res) => {
@@ -239,19 +240,6 @@ app.post('/api/clockify/sync', auth.requireAuth, wrap(async (req, res) => {
   for (const [day, sec] of Object.entries(result.registros)) state.registros[day] = sec;
   await db.putState(req.username, state);
   res.json({ state, days: result.days, count: result.count, range: result.range });
-}));
-
-app.post('/api/clockify/push', auth.requireAuth, wrap(async (req, res) => {
-  const user = await db.getUser(req.username);
-  if (!user.clockify) return res.status(400).json({ error: 'Clockify nao configurado.' });
-  const { date } = req.body || {};
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
-    return res.status(422).json({ error: 'Informe date no formato AAAA-MM-DD.' });
-  }
-  const state = await db.getState(req.username);
-  const seconds = state.registros[date] || 0;
-  const result = await clockify.pushDay(credsFrom(user), date, seconds);
-  res.json({ date, seconds, result });
 }));
 
 /* ------------------------------------------------------------------ *
