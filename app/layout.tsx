@@ -6,8 +6,8 @@ const sans = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Banco de Horas",
-  description: "Controle de banco de horas integrado ao Clockify (somente leitura).",
+  title: "H_Log",
+  description: "Banco de horas integrado ao Clockify (somente leitura).",
 };
 
 // Aplica o tema (claro/escuro) antes do paint, sem flash. Lê localStorage e,

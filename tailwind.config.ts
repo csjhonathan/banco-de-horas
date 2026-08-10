@@ -49,6 +49,7 @@ const config: Config = {
         debit: "hsl(var(--debit))",
         today: "hsl(var(--today))",
         faint: "hsl(var(--faint))",
+        brand: "hsl(var(--brand))",
       },
       borderRadius: {
         xl: "calc(var(--radius) + 4px)",
@@ -66,10 +67,15 @@ const config: Config = {
           from: { opacity: "0", transform: "translate(-50%,-48%) scale(.97)" },
           to: { opacity: "1", transform: "translate(-50%,-50%) scale(1)" },
         },
+        bar: {
+          "0%,100%": { transform: "scaleY(0.35)", opacity: "0.5" },
+          "50%": { transform: "scaleY(1)", opacity: "1" },
+        },
       },
       animation: {
         "fade-in": "fade-in .15s ease-out",
         "zoom-in": "zoom-in .15s ease-out",
+        bars: "bar .9s ease-in-out infinite",
       },
     },
   },

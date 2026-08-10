@@ -43,8 +43,8 @@ export function ClockifyPanel({
             </span>
           </div>
           <div className="grid gap-2">
-            <Button variant="secondary" size="sm" onClick={doSync} disabled={syncing}>
-              {syncing ? "sincronizando…" : "Sincronizar hoje"}
+            <Button variant="secondary" size="sm" onClick={doSync} loading={syncing}>
+              Sincronizar hoje
             </Button>
             <Button variant="outline" size="sm" onClick={onOpenImport}>
               Importar período

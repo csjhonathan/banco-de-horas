@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogoMark, Wordmark } from "@/components/molecules/Logo";
 
 export function LoginForm({ allowRegister }: { allowRegister: boolean }) {
   const router = useRouter();
@@ -50,12 +51,21 @@ export function LoginForm({ allowRegister }: { allowRegister: boolean }) {
   }
 
   return (
-    <div className="mx-auto mt-[8vh] flex max-w-[400px] flex-col gap-4 px-4">
-      <Card className="p-7">
-        <h1 className="text-[15px] font-bold uppercase tracking-[0.14em]">Banco de Horas</h1>
-        <p className="mb-4 mt-1 text-xs text-faint">
-          Entre para ver o seu saldo · dados por usuário
-        </p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[34%] -z-10 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-brand/10 blur-[130px]"
+      />
+      <Card className="w-full max-w-sm p-8">
+        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+          <LogoMark size={46} />
+          <div>
+            <Wordmark className="text-2xl" />
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Seu banco de horas · saldo por usuário
+            </p>
+          </div>
+        </div>
 
         <Tabs
           value={mode}
@@ -64,37 +74,39 @@ export function LoginForm({ allowRegister }: { allowRegister: boolean }) {
             setError("");
           }}
         >
-          <TabsList className="mb-4">
+          <TabsList className="mb-5 w-full">
             <TabsTrigger value="login">Entrar</TabsTrigger>
             {allowRegister && <TabsTrigger value="register">Criar conta</TabsTrigger>}
           </TabsList>
         </Tabs>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-1">
-          <Label htmlFor="user" className="mb-1.5 mt-2 block">
-            Usuário
-          </Label>
-          <Input
-            id="user"
-            autoComplete="username"
-            placeholder="seu.usuario"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <Label htmlFor="pass" className="mb-1.5 mt-3 block">
-            Senha
-          </Label>
-          <Input
-            id="pass"
-            type="password"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            placeholder="••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <div className="mt-3 min-h-4 text-xs font-semibold text-destructive">{error}</div>
-          <Button type="submit" disabled={busy} className="mt-2 w-full">
-            {busy ? "…" : mode === "login" ? "Entrar" : "Criar conta"}
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="user">Usuário</Label>
+            <Input
+              id="user"
+              autoComplete="username"
+              placeholder="seu.usuario"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="pass">Senha</Label>
+            <Input
+              id="pass"
+              type="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              placeholder="••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          {error && (
+            <p className="text-xs font-medium text-destructive">{error}</p>
+          )}
+          <Button type="submit" loading={busy} className="mt-1 w-full">
+            {mode === "login" ? "Entrar" : "Criar conta"}
           </Button>
         </form>
       </Card>

@@ -33,6 +33,7 @@
   --credit: 152 61% 34%; /* emerald-ish */
   --debit: 0 72% 51%;
   --today: 35 92% 40%; /* amber */
+  --brand: 152 60% 36%; /* verde H_Log (adaptado p/ legibilidade no claro) */
 
   color-scheme: light; /* controles nativos (date picker, ícone de calendário) */
 }
@@ -62,6 +63,7 @@
   --credit: 152 58% 52%;
   --debit: 0 74% 63%;
   --today: 38 95% 58%;
+  --brand: 152 90% 55%; /* verde neon no escuro */
 
   color-scheme: dark;
 }

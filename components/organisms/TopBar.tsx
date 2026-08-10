@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SaveIndicator } from "@/components/molecules/SaveIndicator";
 import { JornadaLabel } from "@/components/molecules/JornadaLabel";
 import { ThemeToggle } from "@/components/molecules/ThemeToggle";
+import { Logo } from "@/components/molecules/Logo";
 
 export function TopBar({
   me,
@@ -25,17 +26,13 @@ export function TopBar({
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex items-center gap-3">
-        <span className="grid size-8 place-items-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-          bh
-        </span>
-        <div className="flex flex-col leading-none">
-          <span className="text-sm font-semibold tracking-tight">Banco de Horas</span>
-          <JornadaLabel
-            metaDiaSec={db.metaDiaSec}
-            diasCount={db.diasSemana?.length ?? 5}
-            onClick={onOpenJornada}
-          />
-        </div>
+        <Logo markSize={28} />
+        <span className="hidden h-4 w-px bg-border sm:block" />
+        <JornadaLabel
+          metaDiaSec={db.metaDiaSec}
+          diasCount={db.diasSemana?.length ?? 5}
+          onClick={onOpenJornada}
+        />
       </div>
       <div className="flex items-center gap-1.5">
         <SaveIndicator status={saveStatus} />
@@ -43,9 +40,7 @@ export function TopBar({
           Clockify
         </Button>
         <ThemeToggle />
-        <span className="hidden px-1 text-sm text-muted-foreground sm:inline">
-          @{me.username}
-        </span>
+        <span className="hidden px-1 text-sm text-muted-foreground sm:inline">@{me.username}</span>
         <Button variant="ghost" size="sm" onClick={onLogout} className="text-muted-foreground">
           Sair
         </Button>

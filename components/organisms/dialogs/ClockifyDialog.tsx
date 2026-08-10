@@ -224,8 +224,8 @@ export function ClockifyDialog({
             >
               Importar do Clockify
             </Button>
-            <Button onClick={save} disabled={busy}>
-              {busy ? "testando…" : "Salvar e testar"}
+            <Button onClick={save} loading={busy}>
+              Salvar e testar
             </Button>
           </div>
         </DialogFooter>

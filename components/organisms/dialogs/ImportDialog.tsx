@@ -134,8 +134,8 @@ export function ImportDialog({
           )}
         </DialogBody>
         <DialogFooter>
-          <Button onClick={go} disabled={busy}>
-            {busy ? "importando…" : "Importar"}
+          <Button onClick={go} loading={busy}>
+            Importar
           </Button>
         </DialogFooter>
       </DialogContent>
