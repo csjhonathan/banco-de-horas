@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { State } from "@/types";
 import type { CheckInResult } from "@/hooks/useBancoDeHoras";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
+
+// trava em memória: auto check-in roda 1x por carregamento de página
+// (não re-dispara ao navegar entre meses; reseta no reload → tenta de novo).
+let autoCheckDone = false;
 
 export function EscritorioPanel({
   db,
@@ -26,7 +29,6 @@ export function EscritorioPanel({
   const raioEfetivo = Math.max(150, esc?.raioM ?? 150);
   const [checking, setChecking] = useState(false);
   const [gpsMsg, setGpsMsg] = useState<string | null>(null);
-  const triedRef = useRef(false);
 
   async function runCheck() {
     setChecking(true);
@@ -40,17 +42,10 @@ export function EscritorioPanel({
     // dentro do raio: onCheckIn já marcou → presenteHoje vira true e mostra o verde
   }
 
-  // ao abrir, tenta registrar por GPS automaticamente (uma vez por dia/sessão)
+  // ao abrir, tenta registrar por GPS automaticamente (1x por carregamento)
   useEffect(() => {
-    if (triedRef.current || !esc || presenteHoje) return;
-    const key = `hlog-autocheckin-${hoje}`;
-    try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-    } catch {
-      /* ignore */
-    }
-    triedRef.current = true;
+    if (autoCheckDone || !esc || presenteHoje) return;
+    autoCheckDone = true;
     runCheck();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
