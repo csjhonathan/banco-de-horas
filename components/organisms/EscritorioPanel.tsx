@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { State } from "@/types";
 import type { CheckInResult } from "@/hooks/useBancoDeHoras";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 export function EscritorioPanel({
@@ -22,25 +23,37 @@ export function EscritorioPanel({
 }) {
   const esc = db.escritorio;
   const presenteHoje = !!db.presencial[hoje];
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean; outside?: boolean } | null>(null);
+  const raioEfetivo = Math.max(150, esc?.raioM ?? 150);
+  const [checking, setChecking] = useState(false);
+  const [gpsMsg, setGpsMsg] = useState<string | null>(null);
+  const triedRef = useRef(false);
 
-  async function doCheckIn() {
-    setBusy(true);
-    setMsg(null);
+  async function runCheck() {
+    setChecking(true);
+    setGpsMsg(null);
     const r = await onCheckIn();
-    setBusy(false);
-    if (!r.ok) return setMsg({ text: r.error, ok: false });
-    if (r.withinRadius) {
-      setMsg({ text: `Presença registrada · ${r.distance}m do escritório.`, ok: true });
-    } else {
-      setMsg({
-        text: `Você está a ${r.distance}m (fora do raio de ${esc?.raioM}m).`,
-        ok: false,
-        outside: true,
-      });
+    setChecking(false);
+    if (!r.ok) return setGpsMsg(r.error);
+    if (!r.withinRadius) {
+      setGpsMsg(`GPS: você está a ${r.distance}m (raio ${raioEfetivo}m). Confira ou marque manualmente.`);
     }
+    // dentro do raio: onCheckIn já marcou → presenteHoje vira true e mostra o verde
   }
+
+  // ao abrir, tenta registrar por GPS automaticamente (uma vez por dia/sessão)
+  useEffect(() => {
+    if (triedRef.current || !esc || presenteHoje) return;
+    const key = `hlog-autocheckin-${hoje}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      /* ignore */
+    }
+    triedRef.current = true;
+    runCheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Card className="flex flex-col gap-3 p-5">
@@ -65,34 +78,35 @@ export function EscritorioPanel({
             Configurar local
           </Button>
         </>
+      ) : presenteHoje ? (
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-sm text-credit">
+            <span className="size-2 rounded-full bg-credit" />
+            Presença de hoje registrada
+          </span>
+          <button
+            onClick={() => setPresencial(hoje, false)}
+            className="text-xs text-muted-foreground underline-offset-4 hover:text-destructive hover:underline"
+          >
+            desfazer
+          </button>
+        </div>
+      ) : checking ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner /> verificando sua localização…
+        </div>
       ) : (
         <>
-          {presenteHoje && (
-            <div className="flex items-center gap-2 text-sm text-credit">
-              <span className="size-2 rounded-full bg-credit" />
-              Presença de hoje registrada
-            </div>
-          )}
-          <Button variant="secondary" size="sm" onClick={doCheckIn} loading={busy}>
-            Registrar presença (hoje)
+          <Button size="sm" onClick={() => setPresencial(hoje, true)}>
+            Marcar presença hoje
           </Button>
-          {msg && (
-            <p className={cn("text-xs font-medium", msg.ok ? "text-credit" : "text-destructive")}>
-              {msg.text}
-            </p>
-          )}
-          {msg?.outside && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setPresencial(hoje, true);
-                setMsg({ text: "Marcado manualmente.", ok: true });
-              }}
-            >
-              Marcar mesmo assim
-            </Button>
-          )}
+          {gpsMsg && <p className="text-xs text-muted-foreground">{gpsMsg}</p>}
+          <button
+            onClick={runCheck}
+            className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            tentar por GPS
+          </button>
         </>
       )}
     </Card>

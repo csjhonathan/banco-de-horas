@@ -88,7 +88,7 @@ export function EscritorioDialog({
       setMsg({ text: "Defina o local (localização atual ou endereço).", ok: false });
       return;
     }
-    const raioM = Math.max(20, Number(raio) || 150);
+    const raioM = Math.max(150, Number(raio) || 150);
     onSave({ lat: coords.lat, lng: coords.lng, raioM, label: label || undefined });
     onOpenChange(false);
   }
@@ -128,14 +128,19 @@ export function EscritorioDialog({
             </Button>
           </div>
 
-          <Field label="Raio de tolerância (metros)">
+          <Field label="Raio de tolerância (metros · mín. 150)">
             <Input
               type="number"
               inputMode="numeric"
+              min={150}
               value={raio}
               onChange={(e) => setRaio(e.target.value)}
+              onBlur={() => setRaio(String(Math.max(150, Number(raio) || 150)))}
               className="w-32"
             />
+            <span className="mt-1 text-[11px] text-faint">
+              O GPS (sobretudo no PC) erra bastante — abaixo de 150m dá falso negativo.
+            </span>
           </Field>
 
           <div className="rounded-md bg-muted px-3 py-2.5 text-xs text-muted-foreground">
@@ -146,7 +151,7 @@ export function EscritorioDialog({
                 <span className="num">
                   {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
                 </span>{" "}
-                · raio {Math.max(20, Number(raio) || 150)}m
+                · raio {Math.max(150, Number(raio) || 150)}m
               </>
             ) : (
               "Nenhum local definido ainda."

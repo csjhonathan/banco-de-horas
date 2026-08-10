@@ -133,7 +133,7 @@ export function useBancoDeHoras() {
         }),
       );
       const dist = distMeters(pos.coords.latitude, pos.coords.longitude, esc.lat, esc.lng);
-      const within = dist <= esc.raioM;
+      const within = dist <= Math.max(150, esc.raioM); // 150m mínimo (precisão do GPS)
       if (within) setPresencial(HOJE, true);
       return { ok: true, withinRadius: within, distance: Math.round(dist) };
     } catch {
