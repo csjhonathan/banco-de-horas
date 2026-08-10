@@ -87,6 +87,23 @@ export function jornadaSemana(state: State): number {
   const n = state.diasSemana?.length ? state.diasSemana.length : 5;
   return DAY(state) * n;
 }
+
+/** Distância em metros entre dois pontos (haversine) — usada no check-in GPS. */
+export function distMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371000; // raio da Terra em metros
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
 export function diasDoMes(ym: string): string[] {
   const [y, m] = ym.split("-").map(Number);
   const last = new Date(y, m, 0).getDate();

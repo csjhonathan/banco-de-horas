@@ -103,7 +103,8 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
 { feriadosVersion, metaDiaSec, diasSemana: [1..5],
   fechados: [{ym, dias, trab}],
   registros: {"AAAA-MM-DD": segundos}, feriados: {"AAAA-MM-DD": nome},
-  atestados: {"AAAA-MM-DD": segundos}, presencial: {"AAAA-MM-DD": true} }
+  atestados: {"AAAA-MM-DD": segundos}, presencial: {"AAAA-MM-DD": true},
+  escritorio: { lat, lng, raioM, label } | null }
 ```
 
 ## Pontos não óbvios (leia antes de mexer)
@@ -115,7 +116,12 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
 - **Atestado credita horas no dia**: `metaEfetiva = max(0, metaDia − atestado)`. O saldo
   usa `metaEfetiva`, então atestado abate a meta do dia mas nunca vira crédito sozinho.
 - **Presencial** é um flag por dia (`presencial[dia]=true`) — só marca ida ao escritório,
-  não afeta saldo.
+  não afeta saldo. Check-in por GPS: `escritorio` (lat/lng/raio) + `checkIn()` no hook
+  (haversine `distMeters`); geocoding de endereço via `/api/geocode` (Nominatim/OSM, sem
+  chave). Nada roda em segundo plano — a posição só é lida no clique.
+- **Open Graph**: `app/opengraph-image.tsx` gera o card de preview (WhatsApp lê `og:image`);
+  `metadataBase` vem de `VERCEL_PROJECT_PRODUCTION_URL`. Mudou de domínio? Redeploy + o
+  WhatsApp cacheia por URL.
 - **Dia útil que já passou sem lançamento conta como −meta** (débito). Hoje e futuro
   só contam se lançados. É o que faz a "Meta do mês" e o saldo baterem. Ver
   `diasContabilizados`/`saldoMes` em `lib/horas.ts`.

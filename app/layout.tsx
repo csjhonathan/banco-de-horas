@@ -5,9 +5,30 @@ import { Geist, Geist_Mono } from "next/font/google";
 const sans = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ? process.env.NEXT_PUBLIC_SITE_URL
+  : process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000";
+
+const DESC = "Seu banco de horas integrado ao Clockify — acompanhe o saldo acumulado.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "H_Log",
-  description: "Banco de horas integrado ao Clockify (somente leitura).",
+  description: DESC,
+  openGraph: {
+    title: "H_Log",
+    description: DESC,
+    siteName: "H_Log",
+    type: "website",
+    locale: "pt_BR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "H_Log",
+    description: DESC,
+  },
 };
 
 // Aplica o tema (claro/escuro) antes do paint, sem flash. Lê localStorage e,

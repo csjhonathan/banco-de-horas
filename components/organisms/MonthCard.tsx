@@ -1,6 +1,7 @@
 "use client";
 
 import type { MeResponse, State } from "@/types";
+import type { CheckInResult } from "@/hooks/useBancoDeHoras";
 import { Card } from "@/components/ui/card";
 import { MonthNav } from "@/components/molecules/MonthNav";
 import { diasUteisMes, shiftMonth } from "@/lib/horas";
@@ -23,10 +24,13 @@ export function MonthCard({
   setFeriado,
   deleteFeriado,
   togglePresencial,
+  setPresencial,
   onSyncToday,
   onOpenImport,
   onOpenClockify,
   onOpenAtestado,
+  onCheckIn,
+  onOpenEscritorio,
   onBusyChange,
 }: {
   db: State;
@@ -40,10 +44,13 @@ export function MonthCard({
   setFeriado: (day: string, name: string) => void;
   deleteFeriado: (day: string) => void;
   togglePresencial: (day: string) => void;
+  setPresencial: (day: string, val: boolean) => void;
   onSyncToday: () => Promise<void>;
   onOpenImport: () => void;
   onOpenClockify: () => void;
   onOpenAtestado: (day?: string) => void;
+  onCheckIn: () => Promise<CheckInResult>;
+  onOpenEscritorio: () => void;
   onBusyChange: (busy: boolean) => void;
 }) {
   const fechado = db.fechados.find((x) => x.ym === viewYM);
@@ -85,11 +92,14 @@ export function MonthCard({
       setFeriado={setFeriado}
       deleteFeriado={deleteFeriado}
       togglePresencial={togglePresencial}
+      setPresencial={setPresencial}
       onShiftMonth={onShiftMonth}
       onSyncToday={onSyncToday}
       onOpenImport={onOpenImport}
       onOpenClockify={onOpenClockify}
       onOpenAtestado={onOpenAtestado}
+      onCheckIn={onCheckIn}
+      onOpenEscritorio={onOpenEscritorio}
       onBusyChange={onBusyChange}
     />
   );

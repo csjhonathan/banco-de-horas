@@ -24,6 +24,14 @@ export interface MesFechado {
   trab: number; // total trabalhado em segundos
 }
 
+/** Local do escritório para o check-in por GPS. */
+export interface EscritorioConfig {
+  lat: number;
+  lng: number;
+  raioM: number; // raio de tolerância em metros
+  label?: string;
+}
+
 /** O estado do banco de horas — também usado no backup/restore. */
 export interface State {
   feriadosVersion: number;
@@ -34,6 +42,7 @@ export interface State {
   feriados: Record<string, string>; // "AAAA-MM-DD" -> nome
   atestados: Record<string, number>; // "AAAA-MM-DD" -> segundos creditados
   presencial: Record<string, boolean>; // "AAAA-MM-DD" -> foi ao escritório
+  escritorio: EscritorioConfig | null;
 }
 
 /** Documento do usuário no Mongo (um por usuário). */

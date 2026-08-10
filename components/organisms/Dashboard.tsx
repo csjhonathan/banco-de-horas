@@ -9,6 +9,7 @@ import { MonthCard } from "./MonthCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { JornadaDialog } from "./dialogs/JornadaDialog";
 import { AtestadoDialog } from "./dialogs/AtestadoDialog";
+import { EscritorioDialog } from "./dialogs/EscritorioDialog";
 import { ImportDialog } from "./dialogs/ImportDialog";
 import { ClockifyDialog } from "./dialogs/ClockifyDialog";
 
@@ -21,11 +22,14 @@ export function Dashboard() {
   const [atestadoDay, setAtestadoDay] = useState<string | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
   const [clockifyOpen, setClockifyOpen] = useState(false);
+  const [escritorioOpen, setEscritorioOpen] = useState(false);
 
   useEffect(() => {
-    banco.setDialogsOpen(jornadaOpen || atestadoOpen || importOpen || clockifyOpen);
+    banco.setDialogsOpen(
+      jornadaOpen || atestadoOpen || importOpen || clockifyOpen || escritorioOpen,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jornadaOpen, atestadoOpen, importOpen, clockifyOpen]);
+  }, [jornadaOpen, atestadoOpen, importOpen, clockifyOpen, escritorioOpen]);
 
   async function logout() {
     await signOut({ redirect: false });
@@ -69,6 +73,7 @@ export function Dashboard() {
           setFeriado={banco.setFeriado}
           deleteFeriado={banco.deleteFeriado}
           togglePresencial={banco.togglePresencial}
+          setPresencial={banco.setPresencial}
           onSyncToday={banco.syncToday}
           onOpenImport={() => setImportOpen(true)}
           onOpenClockify={() => setClockifyOpen(true)}
@@ -76,6 +81,8 @@ export function Dashboard() {
             setAtestadoDay(day);
             setAtestadoOpen(true);
           }}
+          onCheckIn={banco.checkIn}
+          onOpenEscritorio={() => setEscritorioOpen(true)}
           onBusyChange={banco.setBusy}
         />
       </div>
@@ -89,6 +96,12 @@ export function Dashboard() {
         metaDiaSec={db.metaDiaSec}
         atestados={db.atestados}
         onSave={banco.setAtestado}
+      />
+      <EscritorioDialog
+        open={escritorioOpen}
+        onOpenChange={setEscritorioOpen}
+        escritorio={db.escritorio}
+        onSave={banco.setEscritorio}
       />
       <ImportDialog
         open={importOpen}

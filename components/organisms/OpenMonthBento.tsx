@@ -13,10 +13,12 @@ import {
   metaEfetiva,
   saldoMes,
 } from "@/lib/horas";
+import type { CheckInResult } from "@/hooks/useBancoDeHoras";
 import { DayTable } from "./DayTable";
 import { LogForm, type LogFormHandle } from "./LogForm";
 import { StatsRail } from "./StatsRail";
 import { ClockifyPanel } from "./ClockifyPanel";
+import { EscritorioPanel } from "./EscritorioPanel";
 import { FeriadosPanel } from "./FeriadosPanel";
 
 export function OpenMonthBento({
@@ -32,11 +34,14 @@ export function OpenMonthBento({
   setFeriado,
   deleteFeriado,
   togglePresencial,
+  setPresencial,
   onShiftMonth,
   onSyncToday,
   onOpenImport,
   onOpenClockify,
   onOpenAtestado,
+  onCheckIn,
+  onOpenEscritorio,
   onBusyChange,
 }: {
   nav: ReactNode;
@@ -51,11 +56,14 @@ export function OpenMonthBento({
   setFeriado: (day: string, name: string) => void;
   deleteFeriado: (day: string) => void;
   togglePresencial: (day: string) => void;
+  setPresencial: (day: string, val: boolean) => void;
   onShiftMonth: (ym: string) => void;
   onSyncToday: () => Promise<void>;
   onOpenImport: () => void;
   onOpenClockify: () => void;
   onOpenAtestado: (day?: string) => void;
+  onCheckIn: () => Promise<CheckInResult>;
+  onOpenEscritorio: () => void;
   onBusyChange: (busy: boolean) => void;
 }) {
   const m = Number(viewYM.split("-")[1]);
@@ -131,6 +139,13 @@ export function OpenMonthBento({
             onSyncToday={onSyncToday}
             onOpenImport={onOpenImport}
             onOpenClockify={onOpenClockify}
+          />
+          <EscritorioPanel
+            db={db}
+            hoje={hoje}
+            onCheckIn={onCheckIn}
+            onOpenEscritorio={onOpenEscritorio}
+            setPresencial={setPresencial}
           />
           <FeriadosPanel db={db} setFeriado={setFeriado} deleteFeriado={deleteFeriado} />
         </aside>

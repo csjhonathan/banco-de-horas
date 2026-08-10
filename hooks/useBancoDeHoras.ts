@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { MeResponse, State } from "@/types";
-import { ymd } from "@/lib/horas";
+import type { EscritorioConfig, MeResponse, State } from "@/types";
+import { distMeters, ymd } from "@/lib/horas";
+
+export type CheckInResult =
+  | { ok: true; withinRadius: boolean; distance: number }
+  | { ok: false; error: string };
 import { API, ApiError, type CfConfigResult, type SyncResult } from "@/lib/api";
 import { usePersistence } from "./usePersistence";
 import { useAutoRefresh } from "./useAutoRefresh";
@@ -97,6 +101,45 @@ export function useBancoDeHoras() {
     },
     [commit, dbRef],
   );
+  const setPresencial = useCallback(
+    (day: string, val: boolean) => {
+      const cur = dbRef.current!;
+      const presencial = { ...cur.presencial };
+      if (val) presencial[day] = true;
+      else delete presencial[day];
+      commit({ ...cur, presencial });
+    },
+    [commit, dbRef],
+  );
+  const setEscritorio = useCallback(
+    (esc: EscritorioConfig | null) => {
+      const cur = dbRef.current!;
+      commit({ ...cur, escritorio: esc });
+    },
+    [commit, dbRef],
+  );
+  const checkIn = useCallback(async (): Promise<CheckInResult> => {
+    const esc = dbRef.current?.escritorio;
+    if (!esc) return { ok: false, error: "Configure o local do escritório primeiro." };
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      return { ok: false, error: "Geolocalização indisponível neste navegador." };
+    }
+    try {
+      const pos = await new Promise<GeolocationPosition>((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }),
+      );
+      const dist = distMeters(pos.coords.latitude, pos.coords.longitude, esc.lat, esc.lng);
+      const within = dist <= esc.raioM;
+      if (within) setPresencial(HOJE, true);
+      return { ok: true, withinRadius: within, distance: Math.round(dist) };
+    } catch {
+      return { ok: false, error: "Não consegui obter sua localização (permissão negada?)." };
+    }
+  }, [dbRef, setPresencial]);
   const recalibrar = useCallback(
     (ym: string, dias: number, trab: number) => {
       const cur = dbRef.current!;
@@ -201,6 +244,9 @@ export function useBancoDeHoras() {
     setJornada,
     setAtestado,
     togglePresencial,
+    setPresencial,
+    setEscritorio,
+    checkIn,
     recalibrar,
     syncRange,
     syncToday,
