@@ -3,34 +3,29 @@
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import { useBancoDeHoras } from "@/hooks/useBancoDeHoras";
-import { useBackup } from "@/hooks/useBackup";
 import { TopBar } from "./TopBar";
 import { HeroSaldo } from "./HeroSaldo";
 import { MonthCard } from "./MonthCard";
-import { FeriadosPanel } from "./FeriadosPanel";
+import { DashboardSkeleton } from "./DashboardSkeleton";
 import { JornadaDialog } from "./dialogs/JornadaDialog";
+import { AtestadoDialog } from "./dialogs/AtestadoDialog";
 import { ImportDialog } from "./dialogs/ImportDialog";
 import { ClockifyDialog } from "./dialogs/ClockifyDialog";
 
 /** Container do app: fia os hooks de estado aos organismos e diálogos. */
 export function Dashboard() {
   const banco = useBancoDeHoras();
-  const backup = useBackup({
-    dbRef: banco.dbRef,
-    replaceFromServer: banco.replaceFromServer,
-    setViewYM: banco.setViewYM,
-    hoje: banco.HOJE,
-  });
 
   const [jornadaOpen, setJornadaOpen] = useState(false);
+  const [atestadoOpen, setAtestadoOpen] = useState(false);
+  const [atestadoDay, setAtestadoDay] = useState<string | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
   const [clockifyOpen, setClockifyOpen] = useState(false);
 
-  // bloqueia o auto-refresh enquanto algum diálogo estiver aberto
   useEffect(() => {
-    banco.setDialogsOpen(jornadaOpen || importOpen || clockifyOpen);
+    banco.setDialogsOpen(jornadaOpen || atestadoOpen || importOpen || clockifyOpen);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jornadaOpen, importOpen, clockifyOpen]);
+  }, [jornadaOpen, atestadoOpen, importOpen, clockifyOpen]);
 
   async function logout() {
     await signOut({ redirect: false });
@@ -45,27 +40,20 @@ export function Dashboard() {
     );
   }
   if (!banco.ready || !banco.db || !banco.me) {
-    return (
-      <div className="mx-auto mt-[10vh] max-w-md px-4 text-center text-sm text-faint">
-        Carregando…
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const { db, me, viewYM } = banco;
 
   return (
     <>
-      <div className="mx-auto flex max-w-[840px] flex-col gap-4 px-4 pb-20 pt-6">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 pb-16 pt-6 sm:px-6 lg:px-8">
         <TopBar
           me={me}
           db={db}
           saveStatus={banco.saveStatus}
           onOpenJornada={() => setJornadaOpen(true)}
           onOpenClockify={() => setClockifyOpen(true)}
-          onExport={backup.exportBackup}
-          onImport={backup.importBackup}
-          onReset={backup.reset}
           onLogout={logout}
         />
         <HeroSaldo db={db} hoje={banco.HOJE} />
@@ -78,17 +66,30 @@ export function Dashboard() {
           setRegistro={banco.setRegistro}
           deleteRegistro={banco.deleteRegistro}
           recalibrar={banco.recalibrar}
+          setFeriado={banco.setFeriado}
+          deleteFeriado={banco.deleteFeriado}
+          togglePresencial={banco.togglePresencial}
           onSyncToday={banco.syncToday}
           onOpenImport={() => setImportOpen(true)}
+          onOpenClockify={() => setClockifyOpen(true)}
+          onOpenAtestado={(day) => {
+            setAtestadoDay(day);
+            setAtestadoOpen(true);
+          }}
           onBusyChange={banco.setBusy}
         />
-        <FeriadosPanel db={db} setFeriado={banco.setFeriado} deleteFeriado={banco.deleteFeriado} />
-        <p className="text-center text-[11px] text-faint">
-          Salvo no servidor (MongoDB) · sincronizável com o Clockify · v3.0
-        </p>
       </div>
 
       <JornadaDialog open={jornadaOpen} onOpenChange={setJornadaOpen} db={db} onSave={banco.setJornada} />
+      <AtestadoDialog
+        open={atestadoOpen}
+        onOpenChange={setAtestadoOpen}
+        hoje={banco.HOJE}
+        initialDay={atestadoDay}
+        metaDiaSec={db.metaDiaSec}
+        atestados={db.atestados}
+        onSave={banco.setAtestado}
+      />
       <ImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}

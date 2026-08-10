@@ -29,6 +29,8 @@ export const FERIADOS_OFICIAIS: Record<string, string> = {
 
 // jornada padrão: 8h por dia útil (em segundos)
 const META_DIA_PADRAO = 28800;
+// dias trabalhados padrão: segunda a sexta
+const DIAS_SEMANA_PADRAO = [1, 2, 3, 4, 5];
 
 /**
  * Estado inicial. Começa VAZIO de lançamentos/meses fechados —
@@ -38,9 +40,12 @@ export function seed(): State {
   return {
     feriadosVersion: FERIADOS_VER,
     metaDiaSec: META_DIA_PADRAO,
+    diasSemana: [...DIAS_SEMANA_PADRAO],
     fechados: [],
     registros: {},
     feriados: { ...FERIADOS_OFICIAIS },
+    atestados: {},
+    presencial: {},
   };
 }
 
@@ -64,6 +69,18 @@ export function migrate(db: State): boolean {
   }
   if (typeof db.metaDiaSec !== "number" || db.metaDiaSec <= 0) {
     db.metaDiaSec = META_DIA_PADRAO;
+    changed = true;
+  }
+  if (!Array.isArray(db.diasSemana) || db.diasSemana.length === 0) {
+    db.diasSemana = [...DIAS_SEMANA_PADRAO];
+    changed = true;
+  }
+  if (!db.atestados || typeof db.atestados !== "object") {
+    db.atestados = {};
+    changed = true;
+  }
+  if (!db.presencial || typeof db.presencial !== "object") {
+    db.presencial = {};
     changed = true;
   }
   if ((db.feriadosVersion || 0) < FERIADOS_VER) {

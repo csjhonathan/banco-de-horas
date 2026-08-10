@@ -28,9 +28,12 @@ export interface MesFechado {
 export interface State {
   feriadosVersion: number;
   metaDiaSec: number;
+  diasSemana: number[]; // dias trabalhados (0=dom … 6=sáb)
   fechados: MesFechado[];
-  registros: Record<string, number>; // "AAAA-MM-DD" -> segundos
+  registros: Record<string, number>; // "AAAA-MM-DD" -> segundos trabalhados
   feriados: Record<string, string>; // "AAAA-MM-DD" -> nome
+  atestados: Record<string, number>; // "AAAA-MM-DD" -> segundos creditados
+  presencial: Record<string, boolean>; // "AAAA-MM-DD" -> foi ao escritório
 }
 
 /** Documento do usuário no Mongo (um por usuário). */

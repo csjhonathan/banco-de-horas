@@ -98,9 +98,6 @@ export function LoginForm({ allowRegister }: { allowRegister: boolean }) {
           </Button>
         </form>
       </Card>
-      <p className="text-center text-[11px] text-faint">
-        Next.js + MongoDB · integração com o Clockify · v3.0
-      </p>
     </div>
   );
 }

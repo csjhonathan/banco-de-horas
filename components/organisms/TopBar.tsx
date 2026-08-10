@@ -4,8 +4,8 @@ import type { MeResponse, State } from "@/types";
 import type { SaveStatus } from "@/hooks/usePersistence";
 import { Button } from "@/components/ui/button";
 import { SaveIndicator } from "@/components/molecules/SaveIndicator";
-import { UserChip } from "@/components/molecules/UserChip";
 import { JornadaLabel } from "@/components/molecules/JornadaLabel";
+import { ThemeToggle } from "@/components/molecules/ThemeToggle";
 
 export function TopBar({
   me,
@@ -13,9 +13,6 @@ export function TopBar({
   saveStatus,
   onOpenJornada,
   onOpenClockify,
-  onExport,
-  onImport,
-  onReset,
   onLogout,
 }: {
   me: MeResponse;
@@ -23,38 +20,33 @@ export function TopBar({
   saveStatus: SaveStatus;
   onOpenJornada: () => void;
   onOpenClockify: () => void;
-  onExport: () => void;
-  onImport: () => void;
-  onReset: () => void;
   onLogout: () => void;
 }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-baseline gap-2.5">
-        <h1 className="text-[15px] font-bold uppercase tracking-[0.14em]">Banco de Horas</h1>
-        <JornadaLabel metaDiaSec={db.metaDiaSec} onClick={onOpenJornada} />
+    <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+      <div className="flex items-center gap-3">
+        <span className="grid size-8 place-items-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+          bh
+        </span>
+        <div className="flex flex-col leading-none">
+          <span className="text-sm font-semibold tracking-tight">Banco de Horas</span>
+          <JornadaLabel
+            metaDiaSec={db.metaDiaSec}
+            diasCount={db.diasSemana?.length ?? 5}
+            onClick={onOpenJornada}
+          />
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <SaveIndicator status={saveStatus} />
-        <UserChip username={me.username} />
-        <Button variant="accent" size="sm" onClick={onOpenClockify}>
+        <Button variant="secondary" size="sm" onClick={onOpenClockify}>
           Clockify
         </Button>
-        <Button variant="outline" size="sm" onClick={onExport}>
-          Backup
-        </Button>
-        <Button variant="outline" size="sm" onClick={onImport}>
-          Importar
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onReset}
-          className="hover:border-destructive hover:text-destructive"
-        >
-          Reiniciar
-        </Button>
-        <Button variant="outline" size="sm" onClick={onLogout}>
+        <ThemeToggle />
+        <span className="hidden px-1 text-sm text-muted-foreground sm:inline">
+          @{me.username}
+        </span>
+        <Button variant="ghost" size="sm" onClick={onLogout} className="text-muted-foreground">
           Sair
         </Button>
       </div>

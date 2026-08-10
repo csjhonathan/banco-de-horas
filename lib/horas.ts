@@ -68,11 +68,24 @@ export function isFeriado(state: State, s: string): boolean {
   return !!state.feriados[s];
 }
 export function isUtil(state: State, s: string): boolean {
-  const d = parseD(s);
-  return !isWeekend(d) && !isFeriado(state, s);
+  const dias = state.diasSemana?.length ? state.diasSemana : [1, 2, 3, 4, 5];
+  return dias.includes(parseD(s).getDay()) && !isFeriado(state, s);
 }
 export function metaDia(state: State, s: string): number {
   return isUtil(state, s) ? DAY(state) : 0;
+}
+/** Horas de atestado creditadas no dia (segundos). */
+export function atestadoDe(state: State, s: string): number {
+  return state.atestados?.[s] ?? 0;
+}
+/** Meta do dia já descontando o atestado (nunca negativa). */
+export function metaEfetiva(state: State, s: string): number {
+  return Math.max(0, metaDia(state, s) - atestadoDe(state, s));
+}
+/** Jornada semanal derivada = meta diária × dias trabalhados. */
+export function jornadaSemana(state: State): number {
+  const n = state.diasSemana?.length ? state.diasSemana.length : 5;
+  return DAY(state) * n;
 }
 export function diasDoMes(ym: string): string[] {
   const [y, m] = ym.split("-").map(Number);
@@ -112,7 +125,7 @@ export function saldoMes(state: State, ym: string, hoje: string): number {
   if (f) return fechadoSaldo(state, f);
   let s = 0;
   for (const d of diasContabilizados(state, ym, hoje))
-    s += (state.registros[d] || 0) - metaDia(state, d);
+    s += (state.registros[d] || 0) - metaEfetiva(state, d);
   return s;
 }
 export function saldoGeral(state: State, hoje: string): number {

@@ -57,7 +57,7 @@ export function TimeInput({
     "num w-8 border-none bg-transparent text-center text-base font-bold outline-none";
 
   return (
-    <div className="flex items-center gap-0.5 rounded-md border border-border bg-card px-2.5 py-1.5 focus-within:border-accent">
+    <div className="flex h-9 items-center gap-0.5 rounded-md border border-input bg-transparent px-2.5 shadow-sm focus-within:ring-1 focus-within:ring-ring">
       <input
         ref={th}
         className={cls}

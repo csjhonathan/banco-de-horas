@@ -2,6 +2,7 @@
 
 import type { State } from "@/types";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { SaldoValue } from "@/components/molecules/SaldoValue";
 import { MonthStripCell } from "@/components/molecules/MonthStripCell";
 import { mesConhecidoList, saldoGeral, saldoMes } from "@/lib/horas";
@@ -12,31 +13,29 @@ export function HeroSaldo({ db, hoje }: { db: State; hoje: string }) {
   let run = 0;
 
   return (
-    <Card className="px-7 py-6">
-      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-        Saldo geral acumulado
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-4">
+    <Card className="flex flex-col lg:flex-row">
+      {/* saldo geral — largura pelo conteúdo, sem vazar */}
+      <div className="flex shrink-0 flex-col justify-center gap-2 px-6 py-5 lg:pr-10">
+        <div className="flex items-center gap-2.5">
+          <span className="eyebrow">Saldo acumulado</span>
+          {g > 0 ? (
+            <Badge variant="credit">Crédito</Badge>
+          ) : g < 0 ? (
+            <Badge variant="debit">Débito</Badge>
+          ) : (
+            <Badge variant="secondary">Zerado</Badge>
+          )}
+        </div>
         <SaldoValue
           sec={g}
           withSec
-          className="text-[clamp(34px,9vw,62px)] font-bold leading-none tracking-tight"
+          className="whitespace-nowrap text-4xl font-bold leading-none tracking-tight sm:text-5xl"
         />
-        {g > 0 ? (
-          <Tag tone="credit">Crédito</Tag>
-        ) : g < 0 ? (
-          <Tag tone="debit">Débito</Tag>
-        ) : (
-          <Tag tone="zero">Zerado</Tag>
-        )}
       </div>
 
-      {meses.length === 0 ? (
-        <div className="mt-5 border-t border-border pt-3.5 text-xs text-faint">
-          Sem lançamentos ainda — abra o Clockify e sincronize, ou solte um ponto abaixo.
-        </div>
-      ) : (
-        <div className="thin-scroll mt-5 flex max-h-[172px] flex-wrap overflow-y-auto border-t border-border">
+      {/* linha do tempo dos meses */}
+      {meses.length > 0 ? (
+        <div className="thin-scroll flex min-w-0 flex-1 overflow-x-auto border-t lg:border-l lg:border-t-0">
           {meses.map((ym) => {
             const s = saldoMes(db, ym, hoje);
             run += s;
@@ -51,22 +50,11 @@ export function HeroSaldo({ db, hoje }: { db: State; hoje: string }) {
             );
           })}
         </div>
+      ) : (
+        <div className="flex flex-1 items-center border-t p-6 text-sm text-muted-foreground lg:border-l lg:border-t-0">
+          Sem lançamentos ainda — conecte o Clockify e sincronize, ou lance um dia abaixo.
+        </div>
       )}
     </Card>
-  );
-}
-
-function Tag({ tone, children }: { tone: "credit" | "debit" | "zero"; children: React.ReactNode }) {
-  const tones = {
-    credit: "bg-credit-bg text-credit",
-    debit: "bg-debit-bg text-debit",
-    zero: "bg-background text-muted-foreground",
-  };
-  return (
-    <span
-      className={`rounded-full px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] ${tones[tone]}`}
-    >
-      {children}
-    </span>
   );
 }

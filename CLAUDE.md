@@ -100,13 +100,22 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
 
 `data` (o estado, também usado no backup/restore):
 ```
-{ feriadosVersion, metaDiaSec, fechados: [{ym, dias, trab}], registros: {"AAAA-MM-DD": segundos}, feriados: {"AAAA-MM-DD": nome} }
+{ feriadosVersion, metaDiaSec, diasSemana: [1..5],
+  fechados: [{ym, dias, trab}],
+  registros: {"AAAA-MM-DD": segundos}, feriados: {"AAAA-MM-DD": nome},
+  atestados: {"AAAA-MM-DD": segundos}, presencial: {"AAAA-MM-DD": true} }
 ```
 
 ## Pontos não óbvios (leia antes de mexer)
 
 - **`metaDiaSec` (meta diária) é por usuário** (estagiário 6h, efetivado 8h…). Toda a
   lógica em `lib/horas.ts` deriva `DAY` de `state.metaDiaSec` — **não hardcode 8h**.
+- **Dias úteis vêm de `state.diasSemana`** (0=dom…6=sáb), **não** "seg–sex" fixo. `isUtil`
+  checa esse conjunto + feriados. A jornada semanal é derivada (`metaDiaSec × nº de dias`).
+- **Atestado credita horas no dia**: `metaEfetiva = max(0, metaDia − atestado)`. O saldo
+  usa `metaEfetiva`, então atestado abate a meta do dia mas nunca vira crédito sozinho.
+- **Presencial** é um flag por dia (`presencial[dia]=true`) — só marca ida ao escritório,
+  não afeta saldo.
 - **Dia útil que já passou sem lançamento conta como −meta** (débito). Hoje e futuro
   só contam se lançados. É o que faz a "Meta do mês" e o saldo baterem. Ver
   `diasContabilizados`/`saldoMes` em `lib/horas.ts`.

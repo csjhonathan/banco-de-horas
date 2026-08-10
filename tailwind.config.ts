@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: ["class"],
@@ -43,50 +44,36 @@ const config: Config = {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
-        // paleta do Banco de Horas (mantida do app original)
-        credit: {
-          DEFAULT: "hsl(var(--credit))",
-          bg: "hsl(var(--credit-bg))",
-        },
-        debit: {
-          DEFAULT: "hsl(var(--debit))",
-          bg: "hsl(var(--debit-bg))",
-        },
-        today: {
-          DEFAULT: "hsl(var(--today))",
-          bg: "hsl(var(--today-bg))",
-        },
+        // semântica do banco de horas (uma cor cada; fundos via alpha, ex.: bg-credit/10)
+        credit: "hsl(var(--credit))",
+        debit: "hsl(var(--debit))",
+        today: "hsl(var(--today))",
         faint: "hsl(var(--faint))",
       },
       borderRadius: {
+        xl: "calc(var(--radius) + 4px)",
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 4px)",
-        sm: "calc(var(--radius) - 6px)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
-      boxShadow: {
-        card: "0 1px 2px rgba(20,26,34,.04), 0 8px 24px rgba(20,26,34,.06)",
-      },
       keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
+        "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+        "zoom-in": {
+          from: { opacity: "0", transform: "translate(-50%,-48%) scale(.97)" },
+          to: { opacity: "1", transform: "translate(-50%,-50%) scale(1)" },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in": "fade-in .15s ease-out",
+        "zoom-in": "zoom-in .15s ease-out",
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

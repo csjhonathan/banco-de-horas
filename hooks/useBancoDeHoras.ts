@@ -71,9 +71,29 @@ export function useBancoDeHoras() {
     [commit, dbRef],
   );
   const setJornada = useCallback(
-    (sec: number) => {
+    (sec: number, diasSemana?: number[]) => {
       const cur = dbRef.current!;
-      commit({ ...cur, metaDiaSec: sec });
+      commit({ ...cur, metaDiaSec: sec, ...(diasSemana ? { diasSemana } : {}) });
+    },
+    [commit, dbRef],
+  );
+  const setAtestado = useCallback(
+    (day: string, sec: number) => {
+      const cur = dbRef.current!;
+      const atestados = { ...cur.atestados };
+      if (sec > 0) atestados[day] = sec;
+      else delete atestados[day];
+      commit({ ...cur, atestados });
+    },
+    [commit, dbRef],
+  );
+  const togglePresencial = useCallback(
+    (day: string) => {
+      const cur = dbRef.current!;
+      const presencial = { ...cur.presencial };
+      if (presencial[day]) delete presencial[day];
+      else presencial[day] = true;
+      commit({ ...cur, presencial });
     },
     [commit, dbRef],
   );
@@ -179,6 +199,8 @@ export function useBancoDeHoras() {
     setFeriado,
     deleteFeriado,
     setJornada,
+    setAtestado,
+    togglePresencial,
     recalibrar,
     syncRange,
     syncToday,

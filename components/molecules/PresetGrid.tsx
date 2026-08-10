@@ -26,8 +26,8 @@ export function PresetGrid({
           className={cn(
             "rounded-md border px-2.5 py-2 text-left text-xs font-semibold transition-colors",
             active === p.key
-              ? "border-accent bg-accent/10 text-accent"
-              : "border-border bg-card text-muted-foreground hover:border-faint hover:text-foreground",
+              ? "border-primary bg-accent text-foreground"
+              : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
           {p.label}

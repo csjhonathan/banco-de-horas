@@ -1,10 +1,18 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+
+const sans = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Banco de Horas",
   description: "Controle de banco de horas integrado ao Clockify (somente leitura).",
 };
+
+// Aplica o tema (claro/escuro) antes do paint, sem flash. Lê localStorage e,
+// na ausência, segue a preferência do sistema.
+const themeInit = `try{var t=localStorage.getItem('theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}`;
 
 export default function RootLayout({
   children,
@@ -12,10 +20,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR">
-      {/* suppressHydrationWarning: extensões (ColorZilla etc.) injetam
-          atributos no <body> antes do React hidratar — é falso positivo. */}
+    <html lang="pt-BR" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen" suppressHydrationWarning>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         {children}
       </body>
     </html>

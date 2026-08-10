@@ -25,7 +25,7 @@ export function SecretRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="signing secret"
-          className="num w-full rounded-md border border-border bg-card px-3 py-2 text-xs focus-visible:border-accent focus-visible:outline-none"
+          className="num w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <small
           className={cn(

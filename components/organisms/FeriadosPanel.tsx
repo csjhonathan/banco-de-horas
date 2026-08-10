@@ -31,7 +31,7 @@ export function FeriadosPanel({
   }
 
   return (
-    <details className="rounded-lg bg-card shadow-card">
+    <details className="rounded-xl border bg-card shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3.5 text-[13px] font-bold text-muted-foreground [&::-webkit-details-marker]:hidden">
         Feriados &amp; folgas <span className="text-faint">›</span>
       </summary>

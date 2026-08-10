@@ -119,8 +119,8 @@ export function ClockifyDialog({
             className={cn(
               "rounded-md px-3 py-2.5 text-xs",
               cfg.configured
-                ? "bg-credit-bg font-semibold text-credit"
-                : "bg-background text-muted-foreground",
+                ? "bg-credit/10 font-medium text-credit"
+                : "bg-muted text-muted-foreground",
             )}
           >
             {cfg.configured
@@ -165,7 +165,7 @@ export function ClockifyDialog({
             <WebhookUrlBox url={me.webhookUrl} />
 
             <details className="mt-2.5 text-xs text-muted-foreground">
-              <summary className="cursor-pointer list-none font-semibold text-accent [&::-webkit-details-marker]:hidden">
+              <summary className="cursor-pointer list-none font-medium text-foreground underline-offset-4 hover:underline [&::-webkit-details-marker]:hidden">
                 Como configurar no Clockify
               </summary>
               <ol className="mt-2 flex list-decimal flex-col gap-1.5 pl-4">
