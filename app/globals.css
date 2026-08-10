@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Tema do Banco de Horas — a paleta é a mesma do app original (paper/ink/
+ * credit/debit/accent/today), agora exposta como CSS vars em HSL para o
+ * Tailwind + shadcn. Tema claro (o app é light-only, como o original).
+ */
+:root {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, "Cascadia Code", monospace;
+
+  --background: 216 17% 94%; /* paper  #EEF0F3 */
+  --foreground: 214 26% 11%; /* ink    #141A22 */
+
+  --card: 0 0% 100%;
+  --card-foreground: 214 26% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 214 26% 11%;
+
+  --primary: 214 26% 11%; /* ink */
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 216 17% 94%;
+  --secondary-foreground: 214 26% 11%;
+
+  --muted: 216 17% 94%;
+  --muted-foreground: 214 9% 46%; /* muted #6B7480 */
+  --faint: 213 10% 64%; /* faint  #9AA2AC */
+
+  --accent: 217 46% 33%; /* accent #2D4A7A */
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 5 62% 47%; /* debit  #C33A2E */
+  --destructive-foreground: 0 0% 100%;
+
+  --credit: 159 74% 27%; /* #127A55 */
+  --credit-bg: 145 33% 93%; /* #E7F3EC */
+  --debit: 5 62% 47%; /* #C33A2E */
+  --debit-bg: 7 69% 95%; /* #FBEBE9 */
+  --today: 37 75% 40%; /* #B4791A */
+  --today-bg: 39 76% 94%; /* #FBF2E2 */
+
+  --border: 214 10% 90%; /* hair #E3E5E8 */
+  --input: 214 10% 90%;
+  --ring: 217 46% 33%;
+
+  --radius: 0.875rem; /* 14px */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* saldo colorido — usado nos valores de crédito/débito/zero */
+.saldo-pos { color: hsl(var(--credit)); }
+.saldo-neg { color: hsl(var(--debit)); }
+.saldo-zero { color: hsl(var(--muted-foreground)); }
+
+/* scrollbar fina na faixa de meses */
+.thin-scroll { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
+.thin-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.thin-scroll::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 8px; }
+.thin-scroll::-webkit-scrollbar-thumb:hover { background: hsl(var(--faint)); }

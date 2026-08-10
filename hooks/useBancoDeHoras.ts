@@ -1,0 +1,189 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { MeResponse, State } from "@/types";
+import { ymd } from "@/lib/horas";
+import { API, ApiError, type CfConfigResult, type SyncResult } from "@/lib/api";
+import { usePersistence } from "./usePersistence";
+import { useAutoRefresh } from "./useAutoRefresh";
+
+const HOJE = ymd(new Date());
+const REFRESH_MS = 60000;
+
+/**
+ * Estado central do banco de horas: usuário, estado persistido (via
+ * usePersistence), mutações, sync com o Clockify e auto-refresh. Concentra a
+ * lógica para manter os componentes burros.
+ */
+export function useBancoDeHoras() {
+  const router = useRouter();
+
+  const handle401 = useCallback(() => {
+    router.push("/login");
+  }, [router]);
+
+  const { db, dbRef, dirtyRef, persistingRef, saveStatus, commit, replaceFromServer } =
+    usePersistence(handle401);
+
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [viewYM, setViewYM] = useState(HOJE.slice(0, 7));
+  const [bootError, setBootError] = useState("");
+
+  const meRef = useRef<MeResponse | null>(null);
+  const busyRef = useRef(false); // usuário digitando no formulário
+  const dialogsRef = useRef(false); // algum diálogo aberto
+  useEffect(() => {
+    meRef.current = me;
+  }, [me]);
+
+  /* ---- mutações ---- */
+  const setRegistro = useCallback(
+    (day: string, sec: number) => {
+      const cur = dbRef.current!;
+      commit({ ...cur, registros: { ...cur.registros, [day]: sec } });
+    },
+    [commit, dbRef],
+  );
+  const deleteRegistro = useCallback(
+    (day: string) => {
+      const cur = dbRef.current!;
+      const registros = { ...cur.registros };
+      delete registros[day];
+      commit({ ...cur, registros });
+    },
+    [commit, dbRef],
+  );
+  const setFeriado = useCallback(
+    (day: string, name: string) => {
+      const cur = dbRef.current!;
+      commit({ ...cur, feriados: { ...cur.feriados, [day]: name } });
+    },
+    [commit, dbRef],
+  );
+  const deleteFeriado = useCallback(
+    (day: string) => {
+      const cur = dbRef.current!;
+      const feriados = { ...cur.feriados };
+      delete feriados[day];
+      commit({ ...cur, feriados });
+    },
+    [commit, dbRef],
+  );
+  const setJornada = useCallback(
+    (sec: number) => {
+      const cur = dbRef.current!;
+      commit({ ...cur, metaDiaSec: sec });
+    },
+    [commit, dbRef],
+  );
+  const recalibrar = useCallback(
+    (ym: string, dias: number, trab: number) => {
+      const cur = dbRef.current!;
+      commit({
+        ...cur,
+        fechados: cur.fechados.map((f) => (f.ym === ym ? { ...f, dias, trab } : f)),
+      });
+    },
+    [commit, dbRef],
+  );
+
+  /* ---- Clockify sync ---- */
+  const syncRange = useCallback(
+    async (start: string, end: string): Promise<SyncResult> => {
+      const res = await API.cfSync({ start, end });
+      replaceFromServer(res.state);
+      return res;
+    },
+    [replaceFromServer],
+  );
+  const syncToday = useCallback(async () => {
+    const res = await API.cfSync({ start: HOJE, end: HOJE });
+    replaceFromServer(res.state);
+  }, [replaceFromServer]);
+
+  const applyClockify = useCallback((cfg: CfConfigResult) => {
+    setMe((prev) => (prev ? { ...prev, clockify: cfg } : prev));
+  }, []);
+
+  /* ---- boot ---- */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const m = await API.me();
+        if (!alive) return;
+        setMe(m);
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) handle401();
+        return;
+      }
+      try {
+        const s = await API.getState();
+        if (!alive) return;
+        replaceFromServer(s);
+        setViewYM(HOJE.slice(0, 7));
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) return handle401();
+        setBootError(e instanceof Error ? e.message : "erro ao carregar");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [handle401, replaceFromServer]);
+
+  /* ---- auto-refresh ---- */
+  const canRun = useCallback(() => {
+    if (!dbRef.current || dirtyRef.current || persistingRef.current) return false;
+    if (busyRef.current || dialogsRef.current) return false;
+    if (typeof window !== "undefined" && window.getSelection && String(window.getSelection()))
+      return false;
+    return true;
+  }, [dbRef, dirtyRef, persistingRef]);
+
+  useAutoRefresh({
+    intervalMs: REFRESH_MS,
+    canRun,
+    onTick: async () =>
+      meRef.current?.clockify.configured
+        ? (await API.cfSync({ start: HOJE, end: HOJE })).state
+        : await API.getState(),
+    getCurrent: () => dbRef.current,
+    onState: replaceFromServer,
+    onError: (e) => {
+      if (e instanceof ApiError && e.status === 401) handle401();
+    },
+  });
+
+  return {
+    HOJE,
+    me,
+    db,
+    dbRef,
+    viewYM,
+    setViewYM,
+    saveStatus,
+    ready: !!(db && me),
+    bootError,
+    setBusy: (b: boolean) => {
+      busyRef.current = b;
+    },
+    setDialogsOpen: (b: boolean) => {
+      dialogsRef.current = b;
+    },
+    handle401,
+    replaceFromServer,
+    setRegistro,
+    deleteRegistro,
+    setFeriado,
+    deleteFeriado,
+    setJornada,
+    recalibrar,
+    syncRange,
+    syncToday,
+    applyClockify,
+  };
+}
+
+export type BancoDeHoras = ReturnType<typeof useBancoDeHoras>;
