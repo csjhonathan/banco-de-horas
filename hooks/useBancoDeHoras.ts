@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { EscritorioConfig, MeResponse, State } from "@/types";
-import { distMeters, ymd } from "@/lib/horas";
+import type { EscritorioConfig, Jornada, MeResponse, State } from "@/types";
+import { distMeters, jornadaDe, ymd } from "@/lib/horas";
+import { normalizeJornadas } from "@/lib/seed";
 
 export type CheckInResult =
   | { ok: true; withinRadius: boolean; distance: number }
@@ -74,10 +75,23 @@ export function useBancoDeHoras() {
     },
     [commit, dbRef],
   );
-  const setJornada = useCallback(
-    (sec: number, diasSemana?: number[]) => {
+  const setJornadas = useCallback(
+    (jornadas: Jornada[]) => {
       const cur = dbRef.current!;
-      commit({ ...cur, metaDiaSec: sec, ...(diasSemana ? { diasSemana } : {}) });
+      const fallback: Jornada = {
+        desde: "0000-01-01",
+        metaDiaSec: cur.metaDiaSec,
+        diasSemana: cur.diasSemana,
+      };
+      const norm = normalizeJornadas(jornadas, fallback);
+      // espelho = vigência que cobre hoje (jornada "atual").
+      const atual = jornadaDe({ ...cur, jornadas: norm }, HOJE);
+      commit({
+        ...cur,
+        jornadas: norm,
+        metaDiaSec: atual.metaDiaSec,
+        diasSemana: [...atual.diasSemana],
+      });
     },
     [commit, dbRef],
   );
@@ -241,7 +255,7 @@ export function useBancoDeHoras() {
     deleteRegistro,
     setFeriado,
     deleteFeriado,
-    setJornada,
+    setJornadas,
     setAtestado,
     togglePresencial,
     setPresencial,

@@ -1,7 +1,10 @@
 // Estado inicial + migração (portado de server/seed.js, sem alterar as regras).
-import type { State } from "@/types";
+import type { Jornada, State } from "@/types";
 
 export const FERIADOS_VER = 2;
+
+// `desde` da vigência mais antiga: sentinela que cobre todo o histórico.
+const DESDE_SEMPRE = "0000-01-01";
 
 /**
  * Feriados / folgas oficiais da Conecta 2026 — só os dias em que a empresa
@@ -39,6 +42,13 @@ const DIAS_SEMANA_PADRAO = [1, 2, 3, 4, 5];
 export function seed(): State {
   return {
     feriadosVersion: FERIADOS_VER,
+    jornadas: [
+      {
+        desde: DESDE_SEMPRE,
+        metaDiaSec: META_DIA_PADRAO,
+        diasSemana: [...DIAS_SEMANA_PADRAO],
+      },
+    ],
     metaDiaSec: META_DIA_PADRAO,
     diasSemana: [...DIAS_SEMANA_PADRAO],
     fechados: [],
@@ -48,6 +58,37 @@ export function seed(): State {
     presencial: {},
     escritorio: null,
   };
+}
+
+/** Uma vigência é válida se tem `desde` (data) e meta diária positiva. */
+function jornadaValida(j: unknown): j is Jornada {
+  const v = j as Jornada;
+  return (
+    !!v &&
+    typeof v === "object" &&
+    typeof v.desde === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(v.desde) &&
+    typeof v.metaDiaSec === "number" &&
+    v.metaDiaSec > 0 &&
+    Array.isArray(v.diasSemana) &&
+    v.diasSemana.length > 0
+  );
+}
+
+/**
+ * Normaliza uma lista de vigências: descarta inválidas, ordena por `desde` e
+ * garante ao menos uma (usando o fallback). A vigência mais antiga é rebaixada
+ * para o sentinela "desde sempre" para cobrir todo o histórico.
+ */
+export function normalizeJornadas(
+  list: unknown,
+  fallback: Jornada,
+): Jornada[] {
+  const arr = (Array.isArray(list) ? list : []).filter(jornadaValida);
+  arr.sort((a, b) => a.desde.localeCompare(b.desde));
+  if (!arr.length) return [{ ...fallback, desde: DESDE_SEMPRE }];
+  arr[0] = { ...arr[0], desde: DESDE_SEMPRE };
+  return arr;
 }
 
 /**
@@ -75,6 +116,20 @@ export function migrate(db: State): boolean {
   if (!Array.isArray(db.diasSemana) || db.diasSemana.length === 0) {
     db.diasSemana = [...DIAS_SEMANA_PADRAO];
     changed = true;
+  }
+  // Vigências de jornada: constrói a partir do espelho legado se ausentes e
+  // normaliza (ordena/valida). O espelho `metaDiaSec`/`diasSemana` (validado
+  // acima) NÃO é sobrescrito aqui — quem escreve as jornadas o mantém em dia
+  // com a vigência de hoje; o cálculo histórico usa `jornadas`, não o espelho.
+  {
+    const fallback: Jornada = {
+      desde: DESDE_SEMPRE,
+      metaDiaSec: db.metaDiaSec,
+      diasSemana: [...db.diasSemana],
+    };
+    const before = JSON.stringify(db.jornadas ?? null);
+    db.jornadas = normalizeJornadas(db.jornadas, fallback);
+    if (JSON.stringify(db.jornadas) !== before) changed = true;
   }
   if (!db.atestados || typeof db.atestados !== "object") {
     db.atestados = {};

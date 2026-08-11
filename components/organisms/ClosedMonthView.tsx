@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/molecules/Field";
 import { Input } from "@/components/ui/input";
 import { StatTile } from "@/components/molecules/StatTile";
-import { saldoColor, signed, toHMS } from "@/lib/horas";
+import { fechadoMeta, saldoColor, signed, toHMS } from "@/lib/horas";
 
 /** Mês consolidado (saldo fechado) com recalibração de dias/total. */
 export function ClosedMonthView({
@@ -18,7 +18,7 @@ export function ClosedMonthView({
   fechado: MesFechado;
   recalibrar: (ym: string, dias: number, trab: number) => void;
 }) {
-  const meta = fechado.dias * db.metaDiaSec;
+  const meta = fechadoMeta(db, fechado);
   const saldo = fechado.trab - meta;
   const [dias, setDias] = useState(String(fechado.dias));
   const [trab, setTrab] = useState(toHMS(fechado.trab));

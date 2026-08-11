@@ -22,6 +22,19 @@ export interface MesFechado {
   ym: string; // "AAAA-MM"
   dias: number; // dias úteis
   trab: number; // total trabalhado em segundos
+  metaSec?: number; // meta congelada no fechamento (segundos). Se ausente, é
+  // derivada de dias × jornada vigente no mês (compat com fechados antigos).
+}
+
+/**
+ * Uma vigência de jornada — vale a partir de `desde` (inclusive) até a próxima
+ * vigência começar. Permite que a jornada mude ao longo do tempo (ex.: promoção
+ * de 6h/dia para 8h/dia). A lista em `State.jornadas` fica ordenada por `desde`.
+ */
+export interface Jornada {
+  desde: string; // "AAAA-MM-DD" — início da vigência (inclusive)
+  metaDiaSec: number; // meta diária em segundos
+  diasSemana: number[]; // dias trabalhados (0=dom … 6=sáb)
 }
 
 /** Local do escritório para o check-in por GPS. */
@@ -35,6 +48,18 @@ export interface EscritorioConfig {
 /** O estado do banco de horas — também usado no backup/restore. */
 export interface State {
   feriadosVersion: number;
+  /**
+   * Vigências de jornada ordenadas por `desde`. Fonte da verdade do cálculo:
+   * cada dia usa a última vigência cujo `desde <= dia`. `migrate` garante ao
+   * menos uma vigência.
+   */
+  jornadas: Jornada[];
+  /**
+   * Espelho da vigência ATUAL (jornada de hoje), mantido em sincronia com
+   * `jornadas` para leituras simples de "jornada atual" (TopBar etc.) e compat
+   * com backups antigos. Não é a fonte da verdade — o cálculo histórico usa
+   * `jornadas`.
+   */
   metaDiaSec: number;
   diasSemana: number[]; // dias trabalhados (0=dom … 6=sáb)
   fechados: MesFechado[];

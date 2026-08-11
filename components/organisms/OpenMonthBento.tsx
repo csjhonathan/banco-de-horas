@@ -10,6 +10,7 @@ import {
   diasDoMes,
   dm,
   isUtil,
+  metaDia,
   metaEfetiva,
   saldoMes,
 } from "@/lib/horas";
@@ -67,7 +68,6 @@ export function OpenMonthBento({
   onBusyChange: (busy: boolean) => void;
 }) {
   const m = Number(viewYM.split("-")[1]);
-  const DAY = db.metaDiaSec;
   const logFormRef = useRef<LogFormHandle>(null);
 
   const regs = Object.keys(db.registros)
@@ -79,12 +79,16 @@ export function OpenMonthBento({
   const faltando = accounted.filter((d) => db.registros[d] == null).length;
   const sMes = saldoMes(db, viewYM, hoje);
   const carry = carryIn(db, viewYM, hoje);
-  const restUteis = diasDoMes(viewYM).filter(
+  const restDias = diasDoMes(viewYM).filter(
     (d) => isUtil(db, d) && d >= hoje && db.registros[d] == null,
-  ).length;
+  );
+  const restUteis = restDias.length;
+  // meta que ainda falta cumprir nos dias úteis restantes — soma dia a dia p/
+  // respeitar jornada que muda no meio do mês.
+  const metaResto = restDias.reduce((a, d) => a + metaDia(db, d), 0);
 
   const perDiaZerar = restUteis > 0 ? (metaMes - carry - trabalhado) / restUteis : 0;
-  const projetado = carry + (trabalhado + restUteis * DAY - metaMes);
+  const projetado = carry + (trabalhado + metaResto - metaMes);
 
   function onDelete(day: string) {
     if (confirm("Apagar o lançamento de " + dm(day) + "?")) deleteRegistro(day);

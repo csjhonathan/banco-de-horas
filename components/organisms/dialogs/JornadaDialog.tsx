@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { State } from "@/types";
+import { Plus } from "lucide-react";
+import type { Jornada, State } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -11,56 +12,86 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { WeekdayPicker } from "@/components/molecules/WeekdayPicker";
-import { fmtJornada, secToHMSParts } from "@/lib/horas";
-import { cn } from "@/lib/utils";
+import { JornadaRow, type JornadaDraft } from "@/components/molecules/JornadaRow";
+import { secToHMSParts } from "@/lib/horas";
 
 function parseHM(str: string): number {
   const p = String(str).trim().split(":");
   return (parseInt(p[0], 10) || 0) * 3600 + (parseInt(p[1], 10) || 0) * 60;
 }
 
-type Mode = "dia" | "semana";
+function toDraft(j: Jornada, first: boolean): JornadaDraft {
+  const [hh, mm] = secToHMSParts(j.metaDiaSec);
+  return { desde: first ? "" : j.desde, metaHM: `${hh}:${mm}`, dias: [...j.diasSemana] };
+}
 
 export function JornadaDialog({
   open,
   onOpenChange,
   db,
+  hoje,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   db: State;
-  onSave: (sec: number, diasSemana: number[]) => void;
+  hoje: string;
+  onSave: (jornadas: Jornada[]) => void;
 }) {
-  const [dias, setDias] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [mode, setMode] = useState<Mode>("dia");
-  const [value, setValue] = useState("08:00");
+  const [rows, setRows] = useState<JornadaDraft[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (open) {
-      setDias(db.diasSemana?.length ? db.diasSemana : [1, 2, 3, 4, 5]);
-      setMode("dia");
-      const [hh, mm] = secToHMSParts(db.metaDiaSec);
-      setValue(`${hh}:${mm}`);
-      setError("");
-    }
-  }, [open, db.metaDiaSec, db.diasSemana]);
+    if (!open) return;
+    const js = db.jornadas?.length
+      ? db.jornadas
+      : [{ desde: "0000-01-01", metaDiaSec: db.metaDiaSec, diasSemana: db.diasSemana }];
+    setRows(js.map((j, i) => toDraft(j, i === 0)));
+    setError("");
+  }, [open, db.jornadas, db.metaDiaSec, db.diasSemana]);
 
-  const n = dias.length;
-  const entered = parseHM(value);
-  const diaSec = mode === "dia" ? entered : n ? Math.round(entered / n) : 0;
-  const semanaSec = mode === "dia" ? entered * n : entered;
+  function updateRow(i: number, next: JornadaDraft) {
+    setRows((rs) => rs.map((r, idx) => (idx === i ? next : r)));
+  }
+  function removeRow(i: number) {
+    setRows((rs) => rs.filter((_, idx) => idx !== i));
+  }
+  function addRow() {
+    setRows((rs) => {
+      const last = rs[rs.length - 1];
+      return [...rs, { desde: hoje, metaHM: last?.metaHM || "08:00", dias: last?.dias ?? [1, 2, 3, 4, 5] }];
+    });
+  }
 
   function save() {
-    if (diaSec <= 0 || diaSec > 24 * 3600) {
-      setError("Jornada diária inválida (entre 00:01 e 24:00).");
+    // valida horas
+    for (const r of rows) {
+      const sec = parseHM(r.metaHM);
+      if (sec <= 0 || sec > 24 * 3600) {
+        setError("Jornada diária inválida (entre 00:01 e 24:00).");
+        return;
+      }
+    }
+    // valida datas das vigências extras (todas menos a inicial)
+    const dated = rows.slice(1);
+    for (const r of dated) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(r.desde)) {
+        setError("Toda vigência adicional precisa de uma data de início.");
+        return;
+      }
+    }
+    const datas = dated.map((r) => r.desde);
+    if (new Set(datas).size !== datas.length) {
+      setError("Duas vigências não podem começar no mesmo dia.");
       return;
     }
-    onSave(diaSec, dias);
+
+    const jornadas: Jornada[] = rows.map((r, i) => ({
+      desde: i === 0 ? "0000-01-01" : r.desde,
+      metaDiaSec: parseHM(r.metaHM),
+      diasSemana: [...r.dias],
+    }));
+    onSave(jornadas);
     onOpenChange(false);
   }
 
@@ -70,51 +101,30 @@ export function JornadaDialog({
         <DialogHeader>
           <DialogTitle>Jornada de trabalho</DialogTitle>
         </DialogHeader>
-        <DialogBody className="gap-4">
-          <div className="flex flex-col gap-2">
-            <Label>Dias trabalhados</Label>
-            <WeekdayPicker value={dias} onChange={setDias} />
+        <DialogBody className="gap-3">
+          <p className="text-xs text-muted-foreground">
+            Cada vigência vale a partir da sua data até a próxima começar. Mudou de
+            jornada (promoção, novo contrato)? Adicione uma vigência com a data da
+            virada — o histórico anterior continua contando pela jornada antiga.
+          </p>
+
+          <div className="flex max-h-[52vh] flex-col gap-2.5 overflow-y-auto pr-1 thin-scroll">
+            {rows.map((r, i) => (
+              <JornadaRow
+                key={i}
+                value={r}
+                first={i === 0}
+                onChange={(next) => updateRow(i, next)}
+                onRemove={rows.length > 1 && i > 0 ? () => removeRow(i) : undefined}
+              />
+            ))}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label>Informar jornada por</Label>
-            <div className="inline-flex w-fit rounded-lg bg-muted p-1">
-              {(["dia", "semana"] as Mode[]).map((mo) => (
-                <button
-                  key={mo}
-                  type="button"
-                  onClick={() => setMode(mo)}
-                  className={cn(
-                    "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-                    mode === mo
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {mo === "dia" ? "Por dia" : "Por semana"}
-                </button>
-              ))}
-            </div>
-            <Input
-              inputMode="numeric"
-              placeholder={mode === "dia" ? "08:00" : "40:00"}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="mt-1 w-32"
-            />
-          </div>
+          <Button variant="ghost" size="sm" onClick={addRow} className="w-fit gap-1.5">
+            <Plus className="size-4" />
+            Nova vigência
+          </Button>
 
-          <div className="rounded-md bg-muted px-3 py-2.5 text-xs text-muted-foreground">
-            {diaSec > 0 ? (
-              <>
-                = <b className="text-foreground">{fmtJornada(diaSec)}</b>/dia ·{" "}
-                <b className="text-foreground">{fmtJornada(semanaSec)}</b>/semana
-                <span className="text-faint"> · {n} dia(s)/semana</span>
-              </>
-            ) : (
-              "informe um valor válido"
-            )}
-          </div>
           <div className="min-h-4 text-xs font-semibold text-destructive">{error}</div>
         </DialogBody>
         <DialogFooter>

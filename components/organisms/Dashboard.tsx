@@ -87,13 +87,19 @@ export function Dashboard() {
         />
       </div>
 
-      <JornadaDialog open={jornadaOpen} onOpenChange={setJornadaOpen} db={db} onSave={banco.setJornada} />
+      <JornadaDialog
+        open={jornadaOpen}
+        onOpenChange={setJornadaOpen}
+        db={db}
+        hoje={banco.HOJE}
+        onSave={banco.setJornadas}
+      />
       <AtestadoDialog
         open={atestadoOpen}
         onOpenChange={setAtestadoOpen}
         hoje={banco.HOJE}
         initialDay={atestadoDay}
-        metaDiaSec={db.metaDiaSec}
+        db={db}
         atestados={db.atestados}
         onSave={banco.setAtestado}
       />

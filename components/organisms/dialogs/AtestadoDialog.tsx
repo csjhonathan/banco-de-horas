@@ -12,7 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/molecules/Field";
-import { fmtJornada, secToHMSParts } from "@/lib/horas";
+import type { State } from "@/types";
+import { fmtJornada, jornadaDe, secToHMSParts } from "@/lib/horas";
 
 function parseHM(str: string): number {
   const p = String(str).trim().split(":");
@@ -24,7 +25,7 @@ export function AtestadoDialog({
   onOpenChange,
   hoje,
   initialDay,
-  metaDiaSec,
+  db,
   atestados,
   onSave,
 }: {
@@ -32,7 +33,7 @@ export function AtestadoDialog({
   onOpenChange: (v: boolean) => void;
   hoje: string;
   initialDay?: string;
-  metaDiaSec: number;
+  db: State;
   atestados: Record<string, number>;
   onSave: (day: string, sec: number) => void;
 }) {
@@ -50,17 +51,14 @@ export function AtestadoDialog({
 
   function fill(d: string) {
     const cur = atestados[d];
-    if (cur) {
-      const [hh, mm] = secToHMSParts(cur);
-      setValue(`${hh}:${mm}`);
-    } else {
-      const [hh, mm] = secToHMSParts(metaDiaSec);
-      setValue(`${hh}:${mm}`);
-    }
+    const [hh, mm] = secToHMSParts(cur || jornadaDe(db, d).metaDiaSec);
+    setValue(`${hh}:${mm}`);
   }
 
   const sec = parseHM(value);
   const existing = !!atestados[day];
+  // meta da jornada vigente no dia selecionado (para o texto de exemplo).
+  const metaDiaSec = jornadaDe(db, day).metaDiaSec;
 
   function save() {
     onSave(day, sec > 0 ? sec : 0);

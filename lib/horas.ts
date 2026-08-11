@@ -1,7 +1,7 @@
 // Lógica de saldo do banco de horas — funções puras (sem DOM), portadas de
 // public/index.html. Recebem o `state` e o dia de hoje ("AAAA-MM-DD") em vez
 // de depender de globais. `DAY` (meta diária) vem sempre de state.metaDiaSec.
-import type { MesFechado, State } from "@/types";
+import type { Jornada, MesFechado, State } from "@/types";
 
 export const SEMANAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 export const MESES = [
@@ -9,8 +9,34 @@ export const MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-function DAY(state: State): number {
-  return state.metaDiaSec || 28800;
+/**
+ * Vigência de jornada aplicável a um dia ("AAAA-MM-DD"): a última cujo
+ * `desde <= dia`. Antes da primeira vigência, extrapola a primeira para trás.
+ * Cai no espelho `metaDiaSec`/`diasSemana` se `jornadas` estiver ausente
+ * (estado legado ainda não migrado).
+ */
+export function jornadaDe(state: State, s: string): Jornada {
+  const js = state.jornadas;
+  if (js && js.length) {
+    let pick = js[0];
+    for (const j of js) if (j.desde <= s) pick = j; // js ordenado por desde asc
+    return pick;
+  }
+  return {
+    desde: "0000-01-01",
+    metaDiaSec: state.metaDiaSec || 28800,
+    diasSemana: state.diasSemana?.length ? state.diasSemana : [1, 2, 3, 4, 5],
+  };
+}
+
+/** Meta diária (segundos) vigente no dia `s`. */
+function DAY(state: State, s: string): number {
+  return jornadaDe(state, s).metaDiaSec || 28800;
+}
+/** Dias trabalhados vigentes no dia `s`. */
+function diasSemanaDe(state: State, s: string): number[] {
+  const d = jornadaDe(state, s).diasSemana;
+  return d?.length ? d : [1, 2, 3, 4, 5];
 }
 
 /* ---- tempo ---- */
@@ -68,11 +94,10 @@ export function isFeriado(state: State, s: string): boolean {
   return !!state.feriados[s];
 }
 export function isUtil(state: State, s: string): boolean {
-  const dias = state.diasSemana?.length ? state.diasSemana : [1, 2, 3, 4, 5];
-  return dias.includes(parseD(s).getDay()) && !isFeriado(state, s);
+  return diasSemanaDe(state, s).includes(parseD(s).getDay()) && !isFeriado(state, s);
 }
 export function metaDia(state: State, s: string): number {
-  return isUtil(state, s) ? DAY(state) : 0;
+  return isUtil(state, s) ? DAY(state, s) : 0;
 }
 /** Horas de atestado creditadas no dia (segundos). */
 export function atestadoDe(state: State, s: string): number {
@@ -82,10 +107,14 @@ export function atestadoDe(state: State, s: string): number {
 export function metaEfetiva(state: State, s: string): number {
   return Math.max(0, metaDia(state, s) - atestadoDe(state, s));
 }
-/** Jornada semanal derivada = meta diária × dias trabalhados. */
-export function jornadaSemana(state: State): number {
-  const n = state.diasSemana?.length ? state.diasSemana.length : 5;
-  return DAY(state) * n;
+/**
+ * Jornada semanal derivada (meta diária × dias trabalhados) da vigência que
+ * cobre `ref` (default: a última vigência conhecida).
+ */
+export function jornadaSemana(state: State, ref?: string): number {
+  const j = jornadaDe(state, ref ?? "9999-12-31");
+  const n = j.diasSemana?.length ? j.diasSemana.length : 5;
+  return (j.metaDiaSec || 28800) * n;
 }
 
 /** Distância em metros entre dois pontos (haversine) — usada no check-in GPS. */
@@ -114,10 +143,21 @@ export function diasDoMes(ym: string): string[] {
 export function diasUteisMes(state: State, ym: string): number {
   return diasDoMes(ym).filter((d) => isUtil(state, d)).length;
 }
+/**
+ * Meta do mês (segundos) somando a meta de cada dia útil — respeita jornada que
+ * muda no meio do mês (ex.: virada de vigência). Substitui o antigo
+ * `diasÚteis × metaDiaSec`.
+ */
+export function metaMesSec(state: State, ym: string): number {
+  return diasDoMes(ym).reduce((a, d) => a + metaDia(state, d), 0);
+}
 
 /* ---- saldos ---- */
 export function fechadoMeta(state: State, f: MesFechado): number {
-  return f.dias * DAY(state);
+  // Meta congelada no fechamento; se ausente (fechado antigo), deriva pela
+  // jornada vigente no início daquele mês — nunca pela jornada de hoje.
+  if (typeof f.metaSec === "number") return f.metaSec;
+  return f.dias * DAY(state, f.ym + "-01");
 }
 export function fechadoSaldo(state: State, f: MesFechado): number {
   return f.trab - fechadoMeta(state, f);

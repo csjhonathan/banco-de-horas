@@ -4,7 +4,7 @@ import type { MeResponse, State } from "@/types";
 import type { CheckInResult } from "@/hooks/useBancoDeHoras";
 import { Card } from "@/components/ui/card";
 import { MonthNav } from "@/components/molecules/MonthNav";
-import { diasUteisMes, shiftMonth } from "@/lib/horas";
+import { diasUteisMes, fechadoMeta, metaMesSec, shiftMonth } from "@/lib/horas";
 import { OpenMonthBento } from "./OpenMonthBento";
 import { ClosedMonthView } from "./ClosedMonthView";
 
@@ -55,7 +55,7 @@ export function MonthCard({
 }) {
   const fechado = db.fechados.find((x) => x.ym === viewYM);
   const uteis = fechado ? fechado.dias : diasUteisMes(db, viewYM);
-  const metaMes = uteis * db.metaDiaSec;
+  const metaMes = fechado ? fechadoMeta(db, fechado) : metaMesSec(db, viewYM);
 
   const nav = (
     <MonthNav

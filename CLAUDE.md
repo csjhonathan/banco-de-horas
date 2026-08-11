@@ -100,8 +100,10 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
 
 `data` (o estado, também usado no backup/restore):
 ```
-{ feriadosVersion, metaDiaSec, diasSemana: [1..5],
-  fechados: [{ym, dias, trab}],
+{ feriadosVersion,
+  jornadas: [{desde:"AAAA-MM-DD", metaDiaSec, diasSemana:[1..5]}],  // vigências (fonte da verdade)
+  metaDiaSec, diasSemana: [1..5],                                   // espelho da vigência de hoje (compat)
+  fechados: [{ym, dias, trab, metaSec?}],                          // metaSec = meta congelada no fechamento
   registros: {"AAAA-MM-DD": segundos}, feriados: {"AAAA-MM-DD": nome},
   atestados: {"AAAA-MM-DD": segundos}, presencial: {"AAAA-MM-DD": true},
   escritorio: { lat, lng, raioM, label } | null }
@@ -109,12 +111,23 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
 
 ## Pontos não óbvios (leia antes de mexer)
 
-- **`metaDiaSec` (meta diária) é por usuário** (estagiário 6h, efetivado 8h…). Toda a
-  lógica em `lib/horas.ts` deriva `DAY` de `state.metaDiaSec` — **não hardcode 8h**.
-- **Dias úteis vêm de `state.diasSemana`** (0=dom…6=sáb), **não** "seg–sex" fixo. `isUtil`
-  checa esse conjunto + feriados. A jornada semanal é derivada (`metaDiaSec × nº de dias`).
+- **Jornada tem HISTÓRICO (`state.jornadas`)** — lista de vigências
+  `{desde, metaDiaSec, diasSemana}` ordenada por `desde`. É a **fonte da verdade** do
+  cálculo: cada dia usa `jornadaDe(state, dia)` = a última vigência cujo `desde <= dia`.
+  Serve pra jornada que muda no tempo (ex.: promoção 6h→8h; os dias sob 6h contam 6h,
+  os sob 8h contam 8h). **Nunca** derive `DAY`/dias direto de `state.metaDiaSec` no
+  cálculo — `metaDia`/`isUtil` já roteiam pela vigência do dia. `metaDiaSec`/`diasSemana`
+  no topo do state são só **espelho da vigência de hoje** (rótulo da TopBar + compat de
+  backup antigo); quem escreve jornadas (`setJornadas` no hook) mantém o espelho em dia.
+- **Dias úteis vêm da vigência do dia** (`diasSemana`, 0=dom…6=sáb), **não** "seg–sex"
+  fixo — `isUtil` checa esse conjunto + feriados. Meta do mês = **soma dia a dia**
+  (`metaMesSec`), não `dias × metaDiaSec`, pra aguentar virada de vigência no meio do mês.
+- **Meses fechados congelam a meta**: `MesFechado.metaSec` (opcional). `fechadoMeta` usa
+  esse valor se presente; senão deriva de `dias × jornada vigente no início do mês` —
+  nunca pela jornada de hoje. `migrate` constrói `jornadas` a partir do espelho legado.
 - **Atestado credita horas no dia**: `metaEfetiva = max(0, metaDia − atestado)`. O saldo
-  usa `metaEfetiva`, então atestado abate a meta do dia mas nunca vira crédito sozinho.
+  usa `metaEfetiva`, então atestado abate a meta do dia (da vigência daquele dia) mas
+  nunca vira crédito sozinho.
 - **Presencial** é um flag por dia (`presencial[dia]=true`) — só marca ida ao escritório,
   não afeta saldo. Check-in por GPS: `escritorio` (lat/lng/raio) + `checkIn()` no hook
   (haversine `distMeters`); geocoding de endereço via `/api/geocode` (Nominatim/OSM, sem
