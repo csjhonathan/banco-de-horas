@@ -16,16 +16,23 @@ const TICK_MS = 1000; // atualiza o decorrido a cada 1s no cliente
  * clock skew do navegador com o `serverNow` retornado. Pausa quando a aba está
  * oculta e re-checa ao voltar o foco.
  */
-export function useRunningTimer(enabled: boolean, onUnauthorized?: () => void) {
+export function useRunningTimer(
+  enabled: boolean,
+  onUnauthorized?: () => void,
+  onStopped?: () => void,
+) {
   const [running, setRunning] = useState<RunningEntry | null>(null);
   const [error, setError] = useState("");
   // now (ms) já ajustado pelo offset servidor↔cliente; alimenta o cálculo do decorrido.
   const [nowMs, setNowMs] = useState(() => Date.now());
   const offsetRef = useRef(0); // serverNow - Date.now() no último fetch
+  const prevIdRef = useRef<string | null>(null); // id do timer no poll anterior
   const onUnauthRef = useRef(onUnauthorized);
+  const onStoppedRef = useRef(onStopped);
   useEffect(() => {
     onUnauthRef.current = onUnauthorized;
-  }, [onUnauthorized]);
+    onStoppedRef.current = onStopped;
+  }, [onUnauthorized, onStopped]);
 
   const poll = useCallback(async () => {
     try {
@@ -34,6 +41,14 @@ export function useRunningTimer(enabled: boolean, onUnauthorized?: () => void) {
       setRunning(r.running);
       setError(r.error || "");
       setNowMs(Date.now() + offsetRef.current);
+      // Transição parar/trocar de task: o timer anterior virou entrada fechada no
+      // Clockify, mas ainda não está em `registros`. Dispara um sync de hoje na
+      // hora pra hoje/saldo não caírem até o auto-refresh de 60s.
+      const nowId = r.running?.id ?? null;
+      if (prevIdRef.current && prevIdRef.current !== nowId) {
+        Promise.resolve(onStoppedRef.current?.()).catch(() => {});
+      }
+      prevIdRef.current = nowId;
       return r.running;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) onUnauthRef.current?.();

@@ -27,7 +27,11 @@ export function Dashboard() {
   const [escritorioOpen, setEscritorioOpen] = useState(false);
   const [view, setView] = useState<"mes" | "relatorios">("mes");
 
-  const timer = useRunningTimer(!!banco.me?.clockify.configured, banco.handle401);
+  const timer = useRunningTimer(
+    !!banco.me?.clockify.configured,
+    banco.handle401,
+    banco.syncToday,
+  );
 
   useEffect(() => {
     banco.setDialogsOpen(
