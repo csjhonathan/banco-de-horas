@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RunningEntry } from "@/types";
 import { API, ApiError } from "@/lib/api";
 
-const POLL_MS = 30000; // re-checa o Clockify a cada 30s (detecta start/stop/troca)
+// Re-checa o Clockify a cada 5s só pra detectar start/stop/troca de task (o
+// DECORRIDO já atualiza a 1s no cliente, então polling menor não deixa nada mais
+// suave — só custa function invocation à toa). Pausa com a aba oculta.
+const POLL_MS = 5000;
 const TICK_MS = 1000; // atualiza o decorrido a cada 1s no cliente
 
 /**
