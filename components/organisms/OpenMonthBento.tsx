@@ -9,6 +9,7 @@ import {
   diasContabilizados,
   diasDoMes,
   dm,
+  isDiaTrabalho,
   isUtil,
   metaDia,
   metaEfetiva,
@@ -80,12 +81,17 @@ export function OpenMonthBento({
     .sort();
   const accounted = diasContabilizados(db, viewYM, hoje);
   // Dias exibidos na tabela: os contabilizados + dias com presencial/atestado
-  // marcado (ex.: hoje ainda sem lançamento) para o marcador não ficar invisível.
+  // marcado (ex.: hoje ainda sem lançamento) + dias de férias que seriam de
+  // trabalho — pra o marcador/período não ficar invisível (fim de semana dentro
+  // das férias não vira linha).
   const displayDays = [
     ...new Set([
       ...accounted,
       ...Object.keys(db.presencial ?? {}).filter((d) => db.presencial[d] && d.startsWith(viewYM)),
       ...Object.keys(db.atestados ?? {}).filter((d) => db.atestados[d] && d.startsWith(viewYM)),
+      ...Object.keys(db.ferias ?? {}).filter(
+        (d) => db.ferias[d] && d.startsWith(viewYM) && isDiaTrabalho(db, d),
+      ),
     ]),
   ].sort();
   const trabalhado = regs.reduce((a, d) => a + db.registros[d], 0);
