@@ -7,11 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Field } from "@/components/molecules/Field";
-import { agruparPeriodos, dm, isUtil, rangeDias } from "@/lib/horas";
+import { agruparPeriodos, isDiaTrabalho, rangeDias } from "@/lib/horas";
 
-/** Formata um período {de, ate} para exibição ("12/08" ou "12/08 – 20/08"). */
+/** "AAAA-MM-DD" -> "DD/MM/AAAA". */
+function br(s: string): string {
+  return s.split("-").reverse().join("/");
+}
+/** Formata um período {de, ate} p/ exibição ("12/08/2026" ou "12/08/2026 – 20/08/2026"). */
 function fmtPeriodo(de: string, ate: string): string {
-  return de === ate ? dm(de) : `${dm(de)} – ${dm(ate)}`;
+  return de === ate ? br(de) : `${br(de)} – ${br(ate)}`;
 }
 
 /**
@@ -21,16 +25,24 @@ function fmtPeriodo(de: string, ate: string): string {
  */
 export function FeriasPanel({
   db,
+  hoje,
   addFerias,
   removeFerias,
 }: {
   db: State;
+  hoje: string;
   addFerias: (de: string, ate: string) => void;
   removeFerias: (de: string, ate: string) => void;
 }) {
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
   const periodos = agruparPeriodos(Object.keys(db.ferias ?? {}).filter((d) => db.ferias[d]));
+
+  function remove(p: { de: string; ate: string }) {
+    // Período que já terminou: pede confirmação (histórico, não deve sumir por engano).
+    if (p.ate < hoje && !confirm(`Apagar as férias de ${fmtPeriodo(p.de, p.ate)}?`)) return;
+    removeFerias(p.de, p.ate);
+  }
 
   function add() {
     if (!de) {
@@ -53,7 +65,10 @@ export function FeriasPanel({
             <div className="text-xs text-faint">Nenhum período de férias cadastrado.</div>
           ) : (
             periodos.map((p) => {
-              const uteis = rangeDias(p.de, p.ate).filter((d) => isUtil(db, d)).length;
+              // dias que SERIAM de trabalho no período (ignora o flag de férias;
+              // desconta feriados que já conhecemos).
+              const uteis = rangeDias(p.de, p.ate).filter((d) => isDiaTrabalho(db, d)).length;
+              const passada = p.ate < hoje;
               return (
                 <div
                   key={p.de}
@@ -64,10 +79,15 @@ export function FeriasPanel({
                     <span className="ml-2 text-xs text-faint">
                       {uteis} {uteis === 1 ? "dia útil" : "dias úteis"}
                     </span>
+                    {passada && (
+                      <Badge variant="secondary" className="ml-2 align-middle">
+                        concluídas
+                      </Badge>
+                    )}
                   </span>
                   <button
-                    onClick={() => removeFerias(p.de, p.ate)}
-                    title="Remover período"
+                    onClick={() => remove(p)}
+                    title={passada ? "Remover (período já concluído)" : "Remover período"}
                     className="text-muted-foreground/50 transition-colors hover:text-destructive"
                   >
                     <X className="size-3.5" />

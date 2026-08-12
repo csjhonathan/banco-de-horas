@@ -97,12 +97,16 @@ export function isFeriado(state: State, s: string): boolean {
 export function isFerias(state: State, s: string): boolean {
   return !!state.ferias?.[s];
 }
+/**
+ * Dia que SERIA de trabalho: dia da semana da jornada e não feriado — ignora o
+ * flag de férias. Serve pra contar quantos dias úteis um período de férias
+ * cobre (senão a própria marcação de férias zeraria a conta).
+ */
+export function isDiaTrabalho(state: State, s: string): boolean {
+  return diasSemanaDe(state, s).includes(parseD(s).getDay()) && !isFeriado(state, s);
+}
 export function isUtil(state: State, s: string): boolean {
-  return (
-    diasSemanaDe(state, s).includes(parseD(s).getDay()) &&
-    !isFeriado(state, s) &&
-    !isFerias(state, s)
-  );
+  return isDiaTrabalho(state, s) && !isFerias(state, s);
 }
 export function metaDia(state: State, s: string): number {
   return isUtil(state, s) ? DAY(state, s) : 0;

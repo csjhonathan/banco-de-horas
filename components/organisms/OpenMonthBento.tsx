@@ -165,7 +165,7 @@ export function OpenMonthBento({
             onOpenEscritorio={onOpenEscritorio}
             setPresencial={setPresencial}
           />
-          <FeriasPanel db={db} addFerias={addFerias} removeFerias={removeFerias} />
+          <FeriasPanel db={db} hoje={hoje} addFerias={addFerias} removeFerias={removeFerias} />
           <FeriadosPanel db={db} setFeriado={setFeriado} deleteFeriado={deleteFeriado} />
         </aside>
       </div>
