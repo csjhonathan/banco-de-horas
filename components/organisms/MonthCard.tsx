@@ -14,6 +14,7 @@ import { ClosedMonthView } from "./ClosedMonthView";
  */
 export function MonthCard({
   db,
+  liveDb,
   me,
   viewYM,
   hoje,
@@ -36,6 +37,7 @@ export function MonthCard({
   onBusyChange,
 }: {
   db: State;
+  liveDb: State;
   me: MeResponse;
   viewYM: string;
   hoje: string;
@@ -86,6 +88,7 @@ export function MonthCard({
     <OpenMonthBento
       nav={nav}
       db={db}
+      liveDb={liveDb}
       me={me}
       viewYM={viewYM}
       hoje={hoje}

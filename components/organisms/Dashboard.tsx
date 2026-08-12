@@ -53,6 +53,15 @@ export function Dashboard() {
 
   const { db, me, viewYM } = banco;
 
+  // Overlay ao vivo: soma o decorrido do cronômetro no dia de hoje SÓ para os
+  // números de saldo (Hero + StatsRail). Não é persistido; o ledger (formulário
+  // e tabela) continua usando `db` real pra não inflar edição/linha do dia.
+  const liveExtra = timer.running ? timer.elapsedSec : 0;
+  const liveDb =
+    liveExtra > 0
+      ? { ...db, registros: { ...db.registros, [banco.HOJE]: (db.registros[banco.HOJE] || 0) + liveExtra } }
+      : db;
+
   return (
     <>
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 pb-16 pt-6 sm:px-6 lg:px-8">
@@ -64,7 +73,7 @@ export function Dashboard() {
           onOpenClockify={() => setClockifyOpen(true)}
           onLogout={logout}
         />
-        <HeroSaldo db={db} hoje={banco.HOJE} />
+        <HeroSaldo db={liveDb} hoje={banco.HOJE} />
         {me.clockify.configured && (
           <RunningTimer
             db={db}
@@ -76,6 +85,7 @@ export function Dashboard() {
         )}
         <MonthCard
           db={db}
+          liveDb={liveDb}
           me={me}
           viewYM={viewYM}
           hoje={banco.HOJE}

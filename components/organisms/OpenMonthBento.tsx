@@ -27,6 +27,7 @@ import { FeriasPanel } from "./FeriasPanel";
 export function OpenMonthBento({
   nav,
   db,
+  liveDb,
   me,
   viewYM,
   hoje,
@@ -51,6 +52,7 @@ export function OpenMonthBento({
 }: {
   nav: ReactNode;
   db: State;
+  liveDb: State;
   me: MeResponse;
   viewYM: string;
   hoje: string;
@@ -76,17 +78,14 @@ export function OpenMonthBento({
   const m = Number(viewYM.split("-")[1]);
   const logFormRef = useRef<LogFormHandle>(null);
 
-  const regs = Object.keys(db.registros)
-    .filter((d) => d.startsWith(viewYM))
-    .sort();
-  const accounted = diasContabilizados(db, viewYM, hoje);
+  // ---- ledger (persistido): tabela usa `db` real, sem o cronômetro ----
   // Dias exibidos na tabela: os contabilizados + dias com presencial/atestado
   // marcado (ex.: hoje ainda sem lançamento) + dias de férias que seriam de
   // trabalho — pra o marcador/período não ficar invisível (fim de semana dentro
   // das férias não vira linha).
   const displayDays = [
     ...new Set([
-      ...accounted,
+      ...diasContabilizados(db, viewYM, hoje),
       ...Object.keys(db.presencial ?? {}).filter((d) => db.presencial[d] && d.startsWith(viewYM)),
       ...Object.keys(db.atestados ?? {}).filter((d) => db.atestados[d] && d.startsWith(viewYM)),
       ...Object.keys(db.ferias ?? {}).filter(
@@ -94,18 +93,22 @@ export function OpenMonthBento({
       ),
     ]),
   ].sort();
-  const trabalhado = regs.reduce((a, d) => a + db.registros[d], 0);
-  const metaAcum = accounted.reduce((a, d) => a + metaEfetiva(db, d), 0);
-  const faltando = accounted.filter((d) => db.registros[d] == null).length;
-  const sMes = saldoMes(db, viewYM, hoje);
-  const carry = carryIn(db, viewYM, hoje);
+
+  // ---- estatísticas (ao vivo): usam `liveDb`, que soma o cronômetro em hoje ----
+  const accounted = diasContabilizados(liveDb, viewYM, hoje);
+  const regs = Object.keys(liveDb.registros).filter((d) => d.startsWith(viewYM));
+  const trabalhado = regs.reduce((a, d) => a + liveDb.registros[d], 0);
+  const metaAcum = accounted.reduce((a, d) => a + metaEfetiva(liveDb, d), 0);
+  const faltando = accounted.filter((d) => liveDb.registros[d] == null).length;
+  const sMes = saldoMes(liveDb, viewYM, hoje);
+  const carry = carryIn(liveDb, viewYM, hoje);
   const restDias = diasDoMes(viewYM).filter(
-    (d) => isUtil(db, d) && d >= hoje && db.registros[d] == null,
+    (d) => isUtil(liveDb, d) && d >= hoje && liveDb.registros[d] == null,
   );
   const restUteis = restDias.length;
   // meta que ainda falta cumprir nos dias úteis restantes — soma dia a dia p/
   // respeitar jornada que muda no meio do mês.
-  const metaResto = restDias.reduce((a, d) => a + metaDia(db, d), 0);
+  const metaResto = restDias.reduce((a, d) => a + metaDia(liveDb, d), 0);
 
   const perDiaZerar = restUteis > 0 ? (metaMes - carry - trabalhado) / restUteis : 0;
   const projetado = carry + (trabalhado + metaResto - metaMes);
