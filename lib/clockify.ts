@@ -118,6 +118,17 @@ async function fetchEntries(
   return all;
 }
 
+/** Entradas em andamento (sem `end`) do usuário, hydrated. */
+async function fetchInProgress(creds: Creds) {
+  const { userId, workspace } = ctxOf(creds);
+  const batch = await cf(
+    creds,
+    "GET",
+    `/workspaces/${workspace}/user/${userId}/time-entries?in-progress=true&hydrated=true&page-size=50`,
+  );
+  return Array.isArray(batch) ? batch : [];
+}
+
 /** Mapa id→{name,color,client} dos projetos do workspace (pra nomear cliente/cor). */
 async function fetchProjectsMap(creds: Creds) {
   const { workspace } = ctxOf(creds);
@@ -222,10 +233,16 @@ export async function breakdown(
   const startDate = start || `${today.slice(0, 7)}-01`;
   const endDate = end || today;
 
-  const [entries, projMap] = await Promise.all([
+  const [entries, projMap, inProgress] = await Promise.all([
     fetchEntries(creds, startDate, endDate, { hydrated: true }),
     fetchProjectsMap(creds).catch(() => new Map()),
+    fetchInProgress(creds).catch(() => []),
   ]);
+
+  // Junta as em andamento (sem `end`) que ainda não vieram na busca por período.
+  const seen = new Set(entries.map((e: any) => e.id));
+  const all = [...entries];
+  for (const e of inProgress) if (!seen.has(e.id)) all.push(e);
 
   const projAgg = new Map<string, BreakdownSlice>();
   const clientAgg = new Map<string, number>();
@@ -233,10 +250,19 @@ export async function breakdown(
   let totalSec = 0;
   let counted = 0;
 
-  for (const e of entries) {
+  for (const e of all) {
     const ti = e.timeInterval || {};
-    if (!ti.start || !ti.end) continue; // ignora timer em andamento
-    const sec = entrySeconds(e);
+    if (!ti.start) continue;
+    let sec: number;
+    if (ti.end) {
+      sec = entrySeconds(e);
+    } else {
+      // Timer em andamento: só conta se o início cai dentro do período; o
+      // "decorrido" é calculado até agora (coerente com o card do cronômetro).
+      const day = localDate(ti.start, creds.tz);
+      if (day < startDate || day > endDate) continue;
+      sec = Math.max(0, Math.round((Date.now() - +new Date(ti.start)) / 1000));
+    }
     if (sec <= 0) continue;
     totalSec += sec;
     counted++;

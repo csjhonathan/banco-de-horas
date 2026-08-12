@@ -78,11 +78,18 @@ export function OpenMonthBento({
   const m = Number(viewYM.split("-")[1]);
   const logFormRef = useRef<LogFormHandle>(null);
 
+  // Tempo do cronômetro em andamento HOJE (deriva de liveDb − db, que o Dashboard
+  // já mantém somando o decorrido). Faz a linha de hoje refletir o timer.
+  const runningToday = Math.max(
+    0,
+    (liveDb.registros[hoje] ?? 0) - (db.registros[hoje] ?? 0),
+  );
+
   // ---- ledger (persistido): tabela usa `db` real, sem o cronômetro ----
   // Dias exibidos na tabela: os contabilizados + dias com presencial/atestado
   // marcado (ex.: hoje ainda sem lançamento) + dias de férias que seriam de
-  // trabalho — pra o marcador/período não ficar invisível (fim de semana dentro
-  // das férias não vira linha).
+  // trabalho + hoje se houver timer rodando — pra nada ficar invisível (fim de
+  // semana dentro das férias não vira linha).
   const displayDays = [
     ...new Set([
       ...diasContabilizados(db, viewYM, hoje),
@@ -91,6 +98,7 @@ export function OpenMonthBento({
       ...Object.keys(db.ferias ?? {}).filter(
         (d) => db.ferias[d] && d.startsWith(viewYM) && isDiaTrabalho(db, d),
       ),
+      ...(runningToday > 0 && hoje.startsWith(viewYM) ? [hoje] : []),
     ]),
   ].sort();
 
@@ -139,6 +147,7 @@ export function OpenMonthBento({
             hoje={hoje}
             monthName={MESES[m - 1]}
             clockifyConfigured={me.clockify.configured}
+            runningToday={runningToday}
             onEdit={(d) => logFormRef.current?.edit(d)}
             onDelete={onDelete}
             onTogglePresencial={togglePresencial}

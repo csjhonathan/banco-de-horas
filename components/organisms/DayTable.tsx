@@ -11,6 +11,7 @@ export function DayTable({
   hoje,
   monthName,
   clockifyConfigured,
+  runningToday = 0,
   onEdit,
   onDelete,
   onTogglePresencial,
@@ -21,6 +22,7 @@ export function DayTable({
   hoje: string;
   monthName: string;
   clockifyConfigured?: boolean;
+  runningToday?: number;
   onEdit: (d: string) => void;
   onDelete: (d: string) => void;
   onTogglePresencial: (d: string) => void;
@@ -54,6 +56,7 @@ export function DayTable({
                 d={d}
                 hoje={hoje}
                 clockifyConfigured={clockifyConfigured}
+                runningSec={d === hoje ? runningToday : 0}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onTogglePresencial={onTogglePresencial}

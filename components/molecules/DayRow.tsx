@@ -28,6 +28,7 @@ export function DayRow({
   d,
   hoje,
   clockifyConfigured,
+  runningSec = 0,
   onEdit,
   onDelete,
   onTogglePresencial,
@@ -37,13 +38,16 @@ export function DayRow({
   d: string;
   hoje: string;
   clockifyConfigured?: boolean;
+  runningSec?: number;
   onEdit: (d: string) => void;
   onDelete: (d: string) => void;
   onTogglePresencial: (d: string) => void;
   onOpenAtestado: (d: string) => void;
 }) {
-  const has = db.registros[d] != null;
-  const sec = has ? db.registros[d] : 0;
+  const hasReal = db.registros[d] != null; // lançamento persistido
+  const running = runningSec > 0; // cronômetro rodando neste dia (hoje)
+  const has = hasReal || running; // tem algo pra mostrar
+  const sec = (hasReal ? db.registros[d] : 0) + runningSec; // trabalhado ao vivo
   const util = isUtil(db, d);
   const atestado = atestadoDe(db, d);
   const metaEf = metaEfetiva(db, d);
@@ -96,6 +100,12 @@ export function DayRow({
           </button>
         )}
         {missing && <Badge variant="debit" className="ml-2">não lançado</Badge>}
+        {running && (
+          <Badge variant="credit" className="ml-2">
+            <span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-credit align-middle" />
+            rodando
+          </Badge>
+        )}
       </td>
       <td className="num px-4 py-2.5 text-right">{has ? toHMS(sec) : "—"}</td>
       <td className="num hidden px-4 py-2.5 text-right text-faint sm:table-cell">
@@ -121,9 +131,9 @@ export function DayRow({
       <td className="px-2 py-2.5 text-right">
         <div className="flex justify-end gap-1">
           <Button variant="ghost" size="sm" onClick={() => onEdit(d)} className="h-7 px-2 text-xs text-muted-foreground">
-            {has ? "editar" : "lançar"}
+            {hasReal ? "editar" : "lançar"}
           </Button>
-          {has && (
+          {hasReal && (
             <Button
               variant="ghost"
               size="sm"

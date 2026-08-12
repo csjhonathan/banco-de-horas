@@ -167,7 +167,9 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   `useBreakdown` → `<ReportsView/>`): **read-through**, NÃO persistido — puxa as time
   entries `hydrated` do período e cruza com o mapa de **projetos** (`/projects`, dá
   `clientName`+cor) pra agregar por projeto, cliente e tarefa. Entrada sem
-  projeto/cliente/tarefa cai em "Sem …"; timer em andamento é ignorado (sem `end`).
+  projeto/cliente/tarefa cai em "Sem …". **Inclui o timer em andamento** (busca
+  `in-progress=true` à parte e soma o decorrido até agora se o início cai no período) —
+  assim relatório/tarefas-do-dia de hoje batem com o card do cronômetro.
   É uma **view** que substitui o card do mês — alternada pelo botão no `MonthNav`
   (`view` mora no `Dashboard`, passado por `MonthCard`). Período segue o mês visto com
   troca rápida (30d/ano/custom) e alterna entre **Lista / Barras / Pizza** (donut top-N
@@ -176,6 +178,10 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   fatia é rotulada → cor nunca é o único canal. Animações via `.animate-rise/.animate-fade`.
 - **Tarefas do dia na tabela**: cada `DayRow` com Clockify + lançamento expande
   (`useDayTasks` = breakdown com `start=end=dia`, lazy) e lista as tarefas daquele dia.
+- **Timer em andamento na tabela**: a linha de hoje soma o decorrido (`runningSec`,
+  derivado de `liveDb − db` no `OpenMonthBento`) ao trabalhado/saldo ao vivo, com badge
+  "rodando" no lugar de "não lançado". Editar/apagar seguem presos ao lançamento
+  **persistido** (`hasReal`) — sem timer não some/apaga nada inexistente.
 - **Webhook**: roteado pelo `workspaceId`+`userId` do payload; assinatura validada
   contra as `webhookSecrets` **do usuário** (fallback global em `CLOCKIFY_WEBHOOK_SECRET`).
   Precisa de URL pública; a URL é deduzida do request (ou de `WEBHOOK_URL`).
