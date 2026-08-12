@@ -41,12 +41,13 @@ app/
     me/route.ts                      username + clockify público + webhookUrl
     state/route.ts   reset/route.ts  estado do banco de horas (GET/PUT, reset)
     clockify/config|sync|webhook     integração (SOMENTE LEITURA)
+    clockify/running                 cronômetro em andamento (GET, polling)
     health/route.ts
 auth.ts  auth.config.ts  middleware.ts
 lib/
   db.ts        Mongo (cache serverless) + acesso por usuário
   password.ts  scrypt + salt (hash/verify)
-  clockify.ts  cliente Clockify SOMENTE LEITURA (verify/syncRange/recomputeDay/webhook)
+  clockify.ts  cliente Clockify SOMENTE LEITURA (verify/syncRange/recomputeDay/runningEntry/webhook)
   seed.ts      estado inicial (feriados 2026) + migração + validState
   horas.ts     LÓGICA DE SALDO (funções puras: saldoMes, carryIn, diasContabilizados…)
   user.ts      helpers de Clockify público / webhookUrl / secrets
@@ -57,6 +58,7 @@ hooks/
   useBancoDeHoras.ts  estado central (usuário, db, mutações, sync, auto-refresh)
   usePersistence.ts   save otimista com debounce
   useAutoRefresh.ts   refresh encadeado sem sobreposição
+  useRunningTimer.ts  observa o cronômetro do Clockify (polling + tick de 1s)
   useBackup.ts        export/import (JSON+CSV) e reset
 components/            Atomic Design
   ui/                  ATOMS = shadcn (button, input, label, card, dialog, tabs)
@@ -147,6 +149,15 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   `diasContabilizados`/`saldoMes` em `lib/horas.ts`.
 - **Clockify é a fonte da verdade na leitura**: apagar um registro no app é só local;
   um sync que cubra o dia pode trazê-lo de volta.
+- **Cronômetro em andamento** (`clockify.runningEntry` → `/api/clockify/running` →
+  `useRunningTimer` → `<RunningTimer/>`): SOMENTE LEITURA — só observa o timer rodando
+  (`in-progress=true&hydrated=true`, traz projeto/tarefa), **nunca** inicia/para nada. O
+  decorrido é calculado no cliente a partir de `start` (tick de 1s), com `serverNow`
+  corrigindo o clock skew do navegador. Timer rodando **não** está em `registros` (o
+  `aggregate` ignora entradas sem `end`), então o débito vivo do dia soma
+  `registros[hoje] + elapsed` sem risco de contagem dobrada — quando o timer para, o
+  auto-refresh (60s) traz o registro fechado. O card fica no `Dashboard` (é sobre "hoje",
+  independe do mês visto) e some se o Clockify não estiver conectado.
 - **Webhook**: roteado pelo `workspaceId`+`userId` do payload; assinatura validada
   contra as `webhookSecrets` **do usuário** (fallback global em `CLOCKIFY_WEBHOOK_SECRET`).
   Precisa de URL pública; a URL é deduzida do request (ou de `WEBHOOK_URL`).

@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import { useBancoDeHoras } from "@/hooks/useBancoDeHoras";
+import { useRunningTimer } from "@/hooks/useRunningTimer";
 import { TopBar } from "./TopBar";
 import { HeroSaldo } from "./HeroSaldo";
+import { RunningTimer } from "./RunningTimer";
 import { MonthCard } from "./MonthCard";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { JornadaDialog } from "./dialogs/JornadaDialog";
@@ -23,6 +25,8 @@ export function Dashboard() {
   const [importOpen, setImportOpen] = useState(false);
   const [clockifyOpen, setClockifyOpen] = useState(false);
   const [escritorioOpen, setEscritorioOpen] = useState(false);
+
+  const timer = useRunningTimer(!!banco.me?.clockify.configured, banco.handle401);
 
   useEffect(() => {
     banco.setDialogsOpen(
@@ -61,6 +65,15 @@ export function Dashboard() {
           onLogout={logout}
         />
         <HeroSaldo db={db} hoje={banco.HOJE} />
+        {me.clockify.configured && (
+          <RunningTimer
+            db={db}
+            hoje={banco.HOJE}
+            running={timer.running}
+            elapsedSec={timer.elapsedSec}
+            error={timer.error}
+          />
+        )}
         <MonthCard
           db={db}
           me={me}

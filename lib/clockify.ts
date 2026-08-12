@@ -1,6 +1,7 @@
 // Integração Clockify (SOMENTE LEITURA) — credenciais por usuário.
 // O app LÊ as horas do Clockify; nunca escreve de volta.
 // Portado de server/clockify.js sem mudar o comportamento.
+import type { RunningEntry } from "@/types";
 
 const BASE = "https://api.clockify.me/api/v1";
 const DEFAULT_TZ = process.env.DEFAULT_TZ || "America/Sao_Paulo";
@@ -145,6 +146,36 @@ export async function syncRange(
 export async function recomputeDay(creds: Creds, day: string) {
   const { registros } = await aggregate(creds, day, day);
   return { day, seconds: registros[day] || 0 };
+}
+
+/**
+ * Cronômetro em andamento do usuário (time entry sem `end`). SOMENTE LEITURA.
+ * Usa `in-progress=true` (só timers rodando) + `hydrated=true` (expande
+ * project/task em objetos). Retorna null se não houver nada rodando.
+ */
+export async function runningEntry(creds: Creds): Promise<RunningEntry | null> {
+  const { userId, workspace } = ctxOf(creds);
+  const q = "?in-progress=true&hydrated=true&page-size=1";
+  const batch = await cf(
+    creds,
+    "GET",
+    `/workspaces/${workspace}/user/${userId}/time-entries${q}`,
+  );
+  const e = Array.isArray(batch) ? batch[0] : null;
+  const ti = e?.timeInterval;
+  // Só conta como "rodando" se tem início e NÃO tem fim.
+  if (!e || !ti?.start || ti?.end) return null;
+  const elapsedSec = Math.max(0, Math.round((Date.now() - +new Date(ti.start)) / 1000));
+  return {
+    id: String(e.id),
+    description: e.description || "",
+    projectName: e.project?.name ?? null,
+    projectColor: e.project?.color ?? null,
+    taskName: e.task?.name ?? null,
+    billable: !!e.billable,
+    start: ti.start,
+    elapsedSec,
+  };
 }
 
 export function dayFromWebhook(payload: any, tz?: string): string | null {

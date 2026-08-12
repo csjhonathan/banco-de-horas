@@ -1,6 +1,6 @@
 // Camada de API do front (mesma origem do Next). Em 401, sinaliza para o
 // chamador redirecionar ao /login.
-import type { ClockifyPublic, MeResponse, State } from "@/types";
+import type { ClockifyPublic, MeResponse, RunningResult, State } from "@/types";
 
 export class ApiError extends Error {
   status?: number;
@@ -57,4 +57,5 @@ export const API = {
       method: "POST",
       body: JSON.stringify(b || {}),
     }),
+  cfRunning: () => jfetch<RunningResult>("/api/clockify/running"),
 };

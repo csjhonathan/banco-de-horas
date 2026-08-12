@@ -94,6 +94,28 @@ export interface ClockifyPublic {
   webhookConfigured?: boolean;
 }
 
+/**
+ * Cronômetro em andamento no Clockify (time entry sem `end`). SOMENTE LEITURA —
+ * o app só observa o timer, nunca inicia/para nada no Clockify.
+ */
+export interface RunningEntry {
+  id: string;
+  description: string;
+  projectName: string | null;
+  projectColor: string | null;
+  taskName: string | null;
+  billable: boolean;
+  start: string; // ISO do início
+  elapsedSec: number; // decorrido calculado no servidor no momento do fetch
+}
+
+/** Resposta de /api/clockify/running. */
+export interface RunningResult {
+  running: RunningEntry | null;
+  serverNow: number; // Date.now() do servidor (ms) — corrige clock skew do cliente
+  error?: string;
+}
+
 /** Resposta de /api/me. */
 export interface MeResponse {
   username: string;
