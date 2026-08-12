@@ -12,6 +12,7 @@ export function DayTable({
   monthName,
   clockifyConfigured,
   runningToday = 0,
+  presencialCount = 0,
   onEdit,
   onDelete,
   onTogglePresencial,
@@ -23,6 +24,7 @@ export function DayTable({
   monthName: string;
   clockifyConfigured?: boolean;
   runningToday?: number;
+  presencialCount?: number;
   onEdit: (d: string) => void;
   onDelete: (d: string) => void;
   onTogglePresencial: (d: string) => void;
@@ -37,7 +39,7 @@ export function DayTable({
             <Th right>Trabalhado</Th>
             <Th right className="hidden sm:table-cell">Meta</Th>
             <Th right>Saldo</Th>
-            <Th center>Presencial</Th>
+            <Th center>Presencial{presencialCount > 0 ? ` (${presencialCount})` : ""}</Th>
             <Th right>{""}</Th>
           </tr>
         </thead>

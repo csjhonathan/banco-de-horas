@@ -85,6 +85,11 @@ export function OpenMonthBento({
     (liveDb.registros[hoje] ?? 0) - (db.registros[hoje] ?? 0),
   );
 
+  // Quantos dias presenciais no mês (mostrado no header da coluna quando > 0).
+  const presencialCount = Object.keys(db.presencial ?? {}).filter(
+    (d) => db.presencial[d] && d.startsWith(viewYM),
+  ).length;
+
   // ---- ledger (persistido): tabela usa `db` real, sem o cronômetro ----
   // Dias exibidos na tabela: os contabilizados + dias com presencial/atestado
   // marcado (ex.: hoje ainda sem lançamento) + dias de férias que seriam de
@@ -148,6 +153,7 @@ export function OpenMonthBento({
             monthName={MESES[m - 1]}
             clockifyConfigured={me.clockify.configured}
             runningToday={runningToday}
+            presencialCount={presencialCount}
             onEdit={(d) => logFormRef.current?.edit(d)}
             onDelete={onDelete}
             onTogglePresencial={togglePresencial}
