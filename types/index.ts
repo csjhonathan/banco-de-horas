@@ -116,6 +116,32 @@ export interface RunningResult {
   error?: string;
 }
 
+/** Uma fatia do breakdown (projeto, cliente ou tarefa) — segundos no período. */
+export interface BreakdownSlice {
+  id: string;
+  name: string;
+  color?: string | null; // cor do projeto (quando aplicável)
+  client?: string | null; // cliente do projeto (quando aplicável)
+  project?: string | null; // projeto da tarefa (quando aplicável)
+  seconds: number;
+}
+
+/** Relatório do período agregado por projeto/cliente/tarefa (SOMENTE LEITURA). */
+export interface Breakdown {
+  range: { start: string; end: string };
+  totalSec: number;
+  entries: number; // qtd de time entries somadas
+  byProject: BreakdownSlice[]; // desc por segundos
+  byClient: BreakdownSlice[]; // desc por segundos
+  byTask: BreakdownSlice[]; // desc por segundos
+}
+
+/** Resposta de /api/clockify/breakdown. */
+export interface BreakdownResult {
+  breakdown: Breakdown | null;
+  error?: string;
+}
+
 /** Resposta de /api/me. */
 export interface MeResponse {
   username: string;

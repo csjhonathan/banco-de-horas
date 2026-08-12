@@ -10,6 +10,7 @@ export function DayTable({
   days,
   hoje,
   monthName,
+  clockifyConfigured,
   onEdit,
   onDelete,
   onTogglePresencial,
@@ -19,6 +20,7 @@ export function DayTable({
   days: string[];
   hoje: string;
   monthName: string;
+  clockifyConfigured?: boolean;
   onEdit: (d: string) => void;
   onDelete: (d: string) => void;
   onTogglePresencial: (d: string) => void;
@@ -51,6 +53,7 @@ export function DayTable({
                 db={db}
                 d={d}
                 hoje={hoje}
+                clockifyConfigured={clockifyConfigured}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onTogglePresencial={onTogglePresencial}

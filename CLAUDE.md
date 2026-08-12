@@ -42,12 +42,13 @@ app/
     state/route.ts   reset/route.ts  estado do banco de horas (GET/PUT, reset)
     clockify/config|sync|webhook     integração (SOMENTE LEITURA)
     clockify/running                 cronômetro em andamento (GET, polling)
+    clockify/breakdown               relatório por projeto/cliente/tarefa (GET)
     health/route.ts
 auth.ts  auth.config.ts  middleware.ts
 lib/
   db.ts        Mongo (cache serverless) + acesso por usuário
   password.ts  scrypt + salt (hash/verify)
-  clockify.ts  cliente Clockify SOMENTE LEITURA (verify/syncRange/recomputeDay/runningEntry/webhook)
+  clockify.ts  cliente Clockify SOMENTE LEITURA (verify/syncRange/recomputeDay/runningEntry/breakdown/webhook)
   seed.ts      estado inicial (feriados 2026) + migração + validState
   horas.ts     LÓGICA DE SALDO (funções puras: saldoMes, carryIn, diasContabilizados…)
   user.ts      helpers de Clockify público / webhookUrl / secrets
@@ -59,13 +60,17 @@ hooks/
   usePersistence.ts   save otimista com debounce
   useAutoRefresh.ts   refresh encadeado sem sobreposição
   useRunningTimer.ts  observa o cronômetro do Clockify (polling + tick de 1s)
+  useBreakdown.ts     busca o relatório por projeto/cliente/tarefa (lazy)
+  useDayTasks.ts      tarefas de um dia (breakdown com start=end=dia, lazy)
   useBackup.ts        export/import (JSON+CSV) e reset
 components/            Atomic Design
   ui/                  ATOMS = shadcn (button, input, label, card, dialog, tabs)
   molecules/           SaldoValue, StatTile, TimeInput, DayRow, MonthNav, SecretRow…
-  organisms/           TopBar, HeroSaldo, MonthCard, OpenMonthView, ClosedMonthView,
-                       LogForm, DayTable, FeriadosPanel, LoginForm, Dashboard,
+  organisms/           TopBar, HeroSaldo, RunningTimer, MonthCard, OpenMonthBento,
+                       ClosedMonthView, LogForm, DayTable, FeriasPanel, FeriadosPanel,
+                       ReportsView, LoginForm, Dashboard,
                        dialogs/{Jornada,Import,Clockify}Dialog
+                       molecules de gráfico: {Bar,List,Donut}Breakdown
 ```
 
 > **Atomic Design é obrigatório aqui.** shadcn/ui é a camada de **atoms**; componha
@@ -158,6 +163,19 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   `registros[hoje] + elapsed` sem risco de contagem dobrada — quando o timer para, o
   auto-refresh (60s) traz o registro fechado. O card fica no `Dashboard` (é sobre "hoje",
   independe do mês visto) e some se o Clockify não estiver conectado.
+- **Relatórios (breakdown)** (`clockify.breakdown` → `/api/clockify/breakdown` →
+  `useBreakdown` → `<ReportsView/>`): **read-through**, NÃO persistido — puxa as time
+  entries `hydrated` do período e cruza com o mapa de **projetos** (`/projects`, dá
+  `clientName`+cor) pra agregar por projeto, cliente e tarefa. Entrada sem
+  projeto/cliente/tarefa cai em "Sem …"; timer em andamento é ignorado (sem `end`).
+  É uma **view** que substitui o card do mês — alternada pelo botão no `MonthNav`
+  (`view` mora no `Dashboard`, passado por `MonthCard`). Período segue o mês visto com
+  troca rápida (30d/ano/custom) e alterna entre **Lista / Barras / Pizza** (donut top-N
+  + "Outros"). Cores: **projeto** usa a cor do Clockify (identidade); cliente/tarefa
+  usam a paleta categórica validada (`--cat-1..8` em globals.css, claro+dark). Toda
+  fatia é rotulada → cor nunca é o único canal. Animações via `.animate-rise/.animate-fade`.
+- **Tarefas do dia na tabela**: cada `DayRow` com Clockify + lançamento expande
+  (`useDayTasks` = breakdown com `start=end=dia`, lazy) e lista as tarefas daquele dia.
 - **Webhook**: roteado pelo `workspaceId`+`userId` do payload; assinatura validada
   contra as `webhookSecrets` **do usuário** (fallback global em `CLOCKIFY_WEBHOOK_SECRET`).
   Precisa de URL pública; a URL é deduzida do request (ou de `WEBHOOK_URL`).

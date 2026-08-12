@@ -7,6 +7,7 @@ import { MonthNav } from "@/components/molecules/MonthNav";
 import { diasUteisMes, fechadoMeta, metaMesSec, shiftMonth } from "@/lib/horas";
 import { OpenMonthBento } from "./OpenMonthBento";
 import { ClosedMonthView } from "./ClosedMonthView";
+import { ReportsView } from "./ReportsView";
 
 /**
  * Área de trabalho do mês: barra de navegação (full-width) + bento de 2 colunas
@@ -35,12 +36,18 @@ export function MonthCard({
   onCheckIn,
   onOpenEscritorio,
   onBusyChange,
+  view,
+  onView,
+  onUnauthorized,
 }: {
   db: State;
   liveDb: State;
   me: MeResponse;
   viewYM: string;
   hoje: string;
+  view?: "mes" | "relatorios";
+  onView?: (v: "mes" | "relatorios") => void;
+  onUnauthorized?: () => void;
   onShiftMonth: (ym: string) => void;
   setRegistro: (day: string, sec: number) => void;
   deleteRegistro: (day: string) => void;
@@ -70,8 +77,23 @@ export function MonthCard({
       metaMes={metaMes}
       onPrev={() => onShiftMonth(shiftMonth(viewYM, -1))}
       onNext={() => onShiftMonth(shiftMonth(viewYM, 1))}
+      view={view}
+      onToggleView={onView}
     />
   );
+
+  if (view === "relatorios") {
+    return (
+      <section className="flex flex-col gap-5">
+        {nav}
+        <ReportsView
+          viewYM={viewYM}
+          hoje={hoje}
+          onUnauthorized={onUnauthorized ?? (() => {})}
+        />
+      </section>
+    );
+  }
 
   if (fechado) {
     return (

@@ -1,7 +1,7 @@
 // Integração Clockify (SOMENTE LEITURA) — credenciais por usuário.
 // O app LÊ as horas do Clockify; nunca escreve de volta.
 // Portado de server/clockify.js sem mudar o comportamento.
-import type { RunningEntry } from "@/types";
+import type { Breakdown, BreakdownSlice, RunningEntry } from "@/types";
 
 const BASE = "https://api.clockify.me/api/v1";
 const DEFAULT_TZ = process.env.DEFAULT_TZ || "America/Sao_Paulo";
@@ -90,16 +90,22 @@ function todayLocal(tz?: string): string {
 }
 
 /* ---- leitura de entradas ---- */
-async function fetchEntries(creds: Creds, startDate: string, endDate: string) {
+async function fetchEntries(
+  creds: Creds,
+  startDate: string,
+  endDate: string,
+  opts: { hydrated?: boolean } = {},
+) {
   const { userId, workspace } = ctxOf(creds);
   const startIso = `${startDate}T00:00:00Z`;
   const endIso = `${endDate}T23:59:59Z`;
   const all: any[] = [];
   const pageSize = 200;
+  const hydrated = opts.hydrated ? "&hydrated=true" : "";
   for (let page = 1; page <= 100; page++) {
     const q =
       `?start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}` +
-      `&page-size=${pageSize}&page=${page}`;
+      `&page-size=${pageSize}&page=${page}${hydrated}`;
     const batch = await cf(
       creds,
       "GET",
@@ -110,6 +116,30 @@ async function fetchEntries(creds: Creds, startDate: string, endDate: string) {
     if (batch.length < pageSize) break;
   }
   return all;
+}
+
+/** Mapa id→{name,color,client} dos projetos do workspace (pra nomear cliente/cor). */
+async function fetchProjectsMap(creds: Creds) {
+  const { workspace } = ctxOf(creds);
+  const map = new Map<string, { name: string; color: string | null; client: string | null }>();
+  const pageSize = 200;
+  for (let page = 1; page <= 50; page++) {
+    const batch = await cf(
+      creds,
+      "GET",
+      `/workspaces/${workspace}/projects?page=${page}&page-size=${pageSize}`,
+    );
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    for (const p of batch) {
+      map.set(String(p.id), {
+        name: p.name ?? "Sem projeto",
+        color: p.color ?? null,
+        client: p.clientName ?? null,
+      });
+    }
+    if (batch.length < pageSize) break;
+  }
+  return map;
 }
 
 async function aggregate(creds: Creds, startDate: string, endDate: string) {
@@ -175,6 +205,82 @@ export async function runningEntry(creds: Creds): Promise<RunningEntry | null> {
     billable: !!e.billable,
     start: ti.start,
     elapsedSec,
+  };
+}
+
+/**
+ * Relatório do período agregado por projeto, cliente e tarefa. SOMENTE LEITURA.
+ * Puxa as time entries `hydrated` (trazem project/task) e cruza com o mapa de
+ * projetos (nome do cliente + cor). Entrada sem projeto/cliente/tarefa cai em
+ * rótulos "Sem …". Ignora entradas em andamento (sem `end`).
+ */
+export async function breakdown(
+  creds: Creds,
+  { start, end }: { start?: string; end?: string } = {},
+): Promise<Breakdown> {
+  const today = todayLocal(creds.tz);
+  const startDate = start || `${today.slice(0, 7)}-01`;
+  const endDate = end || today;
+
+  const [entries, projMap] = await Promise.all([
+    fetchEntries(creds, startDate, endDate, { hydrated: true }),
+    fetchProjectsMap(creds).catch(() => new Map()),
+  ]);
+
+  const projAgg = new Map<string, BreakdownSlice>();
+  const clientAgg = new Map<string, number>();
+  const taskAgg = new Map<string, BreakdownSlice>();
+  let totalSec = 0;
+  let counted = 0;
+
+  for (const e of entries) {
+    const ti = e.timeInterval || {};
+    if (!ti.start || !ti.end) continue; // ignora timer em andamento
+    const sec = entrySeconds(e);
+    if (sec <= 0) continue;
+    totalSec += sec;
+    counted++;
+
+    const pid = String(e.projectId || e.project?.id || "none");
+    const meta = projMap.get(pid);
+    const pname = meta?.name ?? e.project?.name ?? "Sem projeto";
+    const pcolor = meta?.color ?? e.project?.color ?? null;
+    const cname = meta?.client ?? e.project?.clientName ?? null;
+
+    const pcur =
+      projAgg.get(pid) ??
+      ({ id: pid, name: pname, color: pcolor, client: cname, seconds: 0 } as BreakdownSlice);
+    pcur.seconds += sec;
+    projAgg.set(pid, pcur);
+
+    const ckey = cname || "Sem cliente";
+    clientAgg.set(ckey, (clientAgg.get(ckey) || 0) + sec);
+
+    const tid = e.taskId || e.task?.id || null;
+    const tname =
+      e.task?.name ?? (e.description?.trim() ? e.description.trim() : "(sem tarefa)");
+    const tkey = tid ? `t:${tid}` : `d:${pid}:${tname}`;
+    const tcur =
+      taskAgg.get(tkey) ??
+      ({ id: tkey, name: tname, project: pname, color: pcolor, seconds: 0 } as BreakdownSlice);
+    tcur.seconds += sec;
+    taskAgg.set(tkey, tcur);
+  }
+
+  const bySec = (a: BreakdownSlice, b: BreakdownSlice) => b.seconds - a.seconds;
+  const byProject = [...projAgg.values()].sort(bySec);
+  const byClient: BreakdownSlice[] = [...clientAgg.entries()]
+    .map(([name, seconds]) => ({ id: `c:${name}`, name, seconds }))
+    .sort(bySec);
+  const byTask = [...taskAgg.values()].sort(bySec);
+
+  return {
+    range: { start: startDate, end: endDate },
+    totalSec,
+    entries: counted,
+    byProject,
+    byClient,
+    byTask,
   };
 }
 

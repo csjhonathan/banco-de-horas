@@ -138,6 +138,7 @@ export function OpenMonthBento({
             days={displayDays.slice().reverse()}
             hoje={hoje}
             monthName={MESES[m - 1]}
+            clockifyConfigured={me.clockify.configured}
             onEdit={(d) => logFormRef.current?.edit(d)}
             onDelete={onDelete}
             onTogglePresencial={togglePresencial}

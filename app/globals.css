@@ -35,6 +35,16 @@
   --today: 35 92% 40%; /* amber */
   --brand: 152 60% 36%; /* verde H_Log (adaptado p/ legibilidade no claro) */
 
+  /* Paleta categórica p/ gráficos (dataviz — validada CVD, modo claro). */
+  --cat-1: #2a78d6;
+  --cat-2: #eb6834;
+  --cat-3: #1baf7a;
+  --cat-4: #eda100;
+  --cat-5: #e87ba4;
+  --cat-6: #008300;
+  --cat-7: #4a3aa7;
+  --cat-8: #e34948;
+
   color-scheme: light; /* controles nativos (date picker, ícone de calendário) */
 }
 
@@ -65,6 +75,16 @@
   --today: 38 95% 58%;
   --brand: 152 90% 55%; /* verde neon no escuro */
 
+  /* Paleta categórica p/ gráficos (dataviz — mesmos hues, steppados p/ dark). */
+  --cat-1: #3987e5;
+  --cat-2: #d95926;
+  --cat-3: #199e70;
+  --cat-4: #c98500;
+  --cat-5: #d55181;
+  --cat-6: #008300;
+  --cat-7: #9085e9;
+  --cat-8: #e66767;
+
   color-scheme: dark;
 }
 
@@ -92,6 +112,21 @@
 .saldo-pos { color: hsl(var(--credit)); }
 .saldo-neg { color: hsl(var(--debit)); }
 .saldo-zero { color: hsl(var(--muted-foreground)); }
+
+/* ---- animações (relatórios) ---- */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-rise { animation: riseIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-fade { animation: fadeIn 0.25s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise, .animate-fade { animation: none !important; }
+}
 
 .thin-scroll { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
 .thin-scroll::-webkit-scrollbar { width: 8px; height: 8px; }

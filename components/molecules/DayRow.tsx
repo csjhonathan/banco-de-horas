@@ -1,9 +1,12 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronRight } from "lucide-react";
 import type { State } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useDayTasks } from "@/hooks/useDayTasks";
+import { sliceColor } from "@/lib/chartColors";
 import {
   SEMANAS,
   atestadoDe,
@@ -24,6 +27,7 @@ export function DayRow({
   db,
   d,
   hoje,
+  clockifyConfigured,
   onEdit,
   onDelete,
   onTogglePresencial,
@@ -32,6 +36,7 @@ export function DayRow({
   db: State;
   d: string;
   hoje: string;
+  clockifyConfigured?: boolean;
   onEdit: (d: string) => void;
   onDelete: (d: string) => void;
   onTogglePresencial: (d: string) => void;
@@ -47,8 +52,12 @@ export function DayRow({
   const isHoje = d === hoje;
   const missing = !has && util && metaEf > 0;
   const presente = !!db.presencial[d];
+  const canExpand = !!clockifyConfigured && has; // tarefas vêm do Clockify
+  const [open, setOpen] = useState(false);
+  const { tasks, loading, error } = useDayTasks(d, open && canExpand);
 
   return (
+    <>
     <tr
       className={cn(
         "border-b text-sm transition-colors last:border-b-0",
@@ -56,6 +65,15 @@ export function DayRow({
       )}
     >
       <td className="px-4 py-2.5">
+        {canExpand && (
+          <button
+            onClick={() => setOpen((v) => !v)}
+            title={open ? "Ocultar tarefas do dia" : "Ver tarefas do dia"}
+            className="mr-1.5 inline-grid size-5 place-items-center rounded text-muted-foreground/60 transition-colors hover:text-foreground align-middle"
+          >
+            <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
+          </button>
+        )}
         <span className={cn("num font-medium", missing && "text-muted-foreground")}>{dm(d)}</span>
         <span className="ml-2 text-xs capitalize text-muted-foreground">
           {SEMANAS[parseD(d).getDay()]}
@@ -118,5 +136,41 @@ export function DayRow({
         </div>
       </td>
     </tr>
+    {open && canExpand && (
+      <tr className="border-b bg-muted/20 text-sm last:border-b-0">
+        <td colSpan={6} className="px-4 py-3 pl-11">
+          {loading ? (
+            <div className="text-[13px] text-faint">Carregando tarefas…</div>
+          ) : error ? (
+            <div className="text-[13px] text-destructive">{error}</div>
+          ) : !tasks || tasks.length === 0 ? (
+            <div className="text-[13px] text-faint">Sem tarefas detalhadas neste dia.</div>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {tasks.map((t, i) => (
+                <li
+                  key={t.id}
+                  className="animate-rise flex items-center gap-2 text-[13px]"
+                  style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
+                >
+                  <span
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ background: sliceColor(t, i) }}
+                  />
+                  <span className="min-w-0 flex-1 truncate">
+                    {t.name}
+                    {t.project && <span className="ml-1.5 text-xs text-faint">· {t.project}</span>}
+                  </span>
+                  <span className="num shrink-0 tabular-nums text-muted-foreground">
+                    {toHMS(t.seconds)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </td>
+      </tr>
+    )}
+    </>
   );
 }

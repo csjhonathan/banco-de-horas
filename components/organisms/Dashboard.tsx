@@ -25,6 +25,7 @@ export function Dashboard() {
   const [importOpen, setImportOpen] = useState(false);
   const [clockifyOpen, setClockifyOpen] = useState(false);
   const [escritorioOpen, setEscritorioOpen] = useState(false);
+  const [view, setView] = useState<"mes" | "relatorios">("mes");
 
   const timer = useRunningTimer(!!banco.me?.clockify.configured, banco.handle401);
 
@@ -109,6 +110,9 @@ export function Dashboard() {
           onCheckIn={banco.checkIn}
           onOpenEscritorio={() => setEscritorioOpen(true)}
           onBusyChange={banco.setBusy}
+          view={me.clockify.configured ? view : "mes"}
+          onView={me.clockify.configured ? setView : undefined}
+          onUnauthorized={banco.handle401}
         />
       </div>
 
