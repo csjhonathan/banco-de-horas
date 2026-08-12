@@ -67,6 +67,7 @@ export interface State {
   feriados: Record<string, string>; // "AAAA-MM-DD" -> nome
   atestados: Record<string, number>; // "AAAA-MM-DD" -> segundos creditados
   presencial: Record<string, boolean>; // "AAAA-MM-DD" -> foi ao escritório
+  ferias: Record<string, boolean>; // "AAAA-MM-DD" -> dia de férias (não conta meta/débito)
   escritorio: EscritorioConfig | null;
 }
 

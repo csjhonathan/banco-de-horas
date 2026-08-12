@@ -106,6 +106,7 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   fechados: [{ym, dias, trab, metaSec?}],                          // metaSec = meta congelada no fechamento
   registros: {"AAAA-MM-DD": segundos}, feriados: {"AAAA-MM-DD": nome},
   atestados: {"AAAA-MM-DD": segundos}, presencial: {"AAAA-MM-DD": true},
+  ferias: {"AAAA-MM-DD": true},
   escritorio: { lat, lng, raioM, label } | null }
 ```
 
@@ -128,6 +129,12 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
 - **Atestado credita horas no dia**: `metaEfetiva = max(0, metaDia − atestado)`. O saldo
   usa `metaEfetiva`, então atestado abate a meta do dia (da vigência daquele dia) mas
   nunca vira crédito sozinho.
+- **Férias** é um flag por dia (`ferias[dia]=true`) — dia de férias vira **não útil**
+  (`isUtil` também exclui `isFerias`), então não conta meta nem gera débito, como um
+  feriado pessoal. O fluxo (`FeriasPanel`) adiciona/remove por **período** (intervalo de
+  datas): `addFerias`/`removeFerias` no hook expandem o range com `rangeDias`; a listagem
+  reagrupa dias contíguos com `agruparPeriodos`. Trabalhar num dia de férias (registro do
+  Clockify) vira crédito puro (meta 0).
 - **Presencial** é um flag por dia (`presencial[dia]=true`) — só marca ida ao escritório,
   não afeta saldo. Check-in por GPS: `escritorio` (lat/lng/raio) + `checkIn()` no hook
   (haversine `distMeters`); geocoding de endereço via `/api/geocode` (Nominatim/OSM, sem

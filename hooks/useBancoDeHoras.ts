@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EscritorioConfig, Jornada, MeResponse, State } from "@/types";
-import { distMeters, jornadaDe, ymd } from "@/lib/horas";
+import { distMeters, jornadaDe, rangeDias, ymd } from "@/lib/horas";
 import { normalizeJornadas } from "@/lib/seed";
 
 export type CheckInResult =
@@ -122,6 +122,24 @@ export function useBancoDeHoras() {
       if (val) presencial[day] = true;
       else delete presencial[day];
       commit({ ...cur, presencial });
+    },
+    [commit, dbRef],
+  );
+  const addFerias = useCallback(
+    (de: string, ate: string) => {
+      const cur = dbRef.current!;
+      const ferias = { ...cur.ferias };
+      for (const d of rangeDias(de, ate)) ferias[d] = true;
+      commit({ ...cur, ferias });
+    },
+    [commit, dbRef],
+  );
+  const removeFerias = useCallback(
+    (de: string, ate: string) => {
+      const cur = dbRef.current!;
+      const ferias = { ...cur.ferias };
+      for (const d of rangeDias(de, ate)) delete ferias[d];
+      commit({ ...cur, ferias });
     },
     [commit, dbRef],
   );
@@ -259,6 +277,8 @@ export function useBancoDeHoras() {
     setAtestado,
     togglePresencial,
     setPresencial,
+    addFerias,
+    removeFerias,
     setEscritorio,
     checkIn,
     recalibrar,

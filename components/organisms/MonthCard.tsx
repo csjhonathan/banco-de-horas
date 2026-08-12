@@ -25,6 +25,8 @@ export function MonthCard({
   deleteFeriado,
   togglePresencial,
   setPresencial,
+  addFerias,
+  removeFerias,
   onSyncToday,
   onOpenImport,
   onOpenClockify,
@@ -45,6 +47,8 @@ export function MonthCard({
   deleteFeriado: (day: string) => void;
   togglePresencial: (day: string) => void;
   setPresencial: (day: string, val: boolean) => void;
+  addFerias: (de: string, ate: string) => void;
+  removeFerias: (de: string, ate: string) => void;
   onSyncToday: () => Promise<void>;
   onOpenImport: () => void;
   onOpenClockify: () => void;
@@ -93,6 +97,8 @@ export function MonthCard({
       deleteFeriado={deleteFeriado}
       togglePresencial={togglePresencial}
       setPresencial={setPresencial}
+      addFerias={addFerias}
+      removeFerias={removeFerias}
       onShiftMonth={onShiftMonth}
       onSyncToday={onSyncToday}
       onOpenImport={onOpenImport}

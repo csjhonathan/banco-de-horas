@@ -56,6 +56,7 @@ export function seed(): State {
     feriados: { ...FERIADOS_OFICIAIS },
     atestados: {},
     presencial: {},
+    ferias: {},
     escritorio: null,
   };
 }
@@ -137,6 +138,10 @@ export function migrate(db: State): boolean {
   }
   if (!db.presencial || typeof db.presencial !== "object") {
     db.presencial = {};
+    changed = true;
+  }
+  if (!db.ferias || typeof db.ferias !== "object") {
+    db.ferias = {};
     changed = true;
   }
   if (db.escritorio === undefined) {

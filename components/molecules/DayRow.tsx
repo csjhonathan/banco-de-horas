@@ -9,6 +9,7 @@ import {
   atestadoDe,
   dm,
   isFeriado,
+  isFerias,
   isUtil,
   metaEfetiva,
   parseD,
@@ -62,7 +63,7 @@ export function DayRow({
         {isHoje && <Badge variant="today" className="ml-2">hoje</Badge>}
         {folga && (
           <Badge variant="secondary" className="ml-2">
-            {isFeriado(db, d) ? "folga" : "descanso"}
+            {isFerias(db, d) ? "férias" : isFeriado(db, d) ? "folga" : "descanso"}
           </Badge>
         )}
         {atestado > 0 && (

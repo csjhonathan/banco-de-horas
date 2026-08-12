@@ -93,8 +93,16 @@ export function isWeekend(d: Date): boolean {
 export function isFeriado(state: State, s: string): boolean {
   return !!state.feriados[s];
 }
+/** Dia de férias — não conta meta nem gera débito (como um feriado pessoal). */
+export function isFerias(state: State, s: string): boolean {
+  return !!state.ferias?.[s];
+}
 export function isUtil(state: State, s: string): boolean {
-  return diasSemanaDe(state, s).includes(parseD(s).getDay()) && !isFeriado(state, s);
+  return (
+    diasSemanaDe(state, s).includes(parseD(s).getDay()) &&
+    !isFeriado(state, s) &&
+    !isFerias(state, s)
+  );
 }
 export function metaDia(state: State, s: string): number {
   return isUtil(state, s) ? DAY(state, s) : 0;
@@ -205,6 +213,24 @@ export function mondayOf(s: string): string {
   const w = d.getDay();
   d.setDate(d.getDate() + (w === 0 ? -6 : 1 - w));
   return ymd(d);
+}
+/** Lista todos os dias ("AAAA-MM-DD") do intervalo [de, ate] inclusivo. */
+export function rangeDias(de: string, ate: string): string[] {
+  if (de > ate) [de, ate] = [ate, de];
+  const out: string[] = [];
+  for (let d = de; d <= ate; d = addDays(d, 1)) out.push(d);
+  return out;
+}
+/** Agrupa datas soltas em períodos contíguos {de, ate} (ordenados). */
+export function agruparPeriodos(dates: string[]): { de: string; ate: string }[] {
+  const sorted = [...new Set(dates)].sort();
+  const out: { de: string; ate: string }[] = [];
+  for (const d of sorted) {
+    const last = out[out.length - 1];
+    if (last && addDays(last.ate, 1) === d) last.ate = d;
+    else out.push({ de: d, ate: d });
+  }
+  return out;
 }
 export function monthRangeYM(ym: string): [string, string] {
   const ds = diasDoMes(ym);

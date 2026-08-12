@@ -21,6 +21,7 @@ import { StatsRail } from "./StatsRail";
 import { ClockifyPanel } from "./ClockifyPanel";
 import { EscritorioPanel } from "./EscritorioPanel";
 import { FeriadosPanel } from "./FeriadosPanel";
+import { FeriasPanel } from "./FeriasPanel";
 
 export function OpenMonthBento({
   nav,
@@ -36,6 +37,8 @@ export function OpenMonthBento({
   deleteFeriado,
   togglePresencial,
   setPresencial,
+  addFerias,
+  removeFerias,
   onShiftMonth,
   onSyncToday,
   onOpenImport,
@@ -58,6 +61,8 @@ export function OpenMonthBento({
   deleteFeriado: (day: string) => void;
   togglePresencial: (day: string) => void;
   setPresencial: (day: string, val: boolean) => void;
+  addFerias: (de: string, ate: string) => void;
+  removeFerias: (de: string, ate: string) => void;
   onShiftMonth: (ym: string) => void;
   onSyncToday: () => Promise<void>;
   onOpenImport: () => void;
@@ -74,6 +79,15 @@ export function OpenMonthBento({
     .filter((d) => d.startsWith(viewYM))
     .sort();
   const accounted = diasContabilizados(db, viewYM, hoje);
+  // Dias exibidos na tabela: os contabilizados + dias com presencial/atestado
+  // marcado (ex.: hoje ainda sem lançamento) para o marcador não ficar invisível.
+  const displayDays = [
+    ...new Set([
+      ...accounted,
+      ...Object.keys(db.presencial ?? {}).filter((d) => db.presencial[d] && d.startsWith(viewYM)),
+      ...Object.keys(db.atestados ?? {}).filter((d) => db.atestados[d] && d.startsWith(viewYM)),
+    ]),
+  ].sort();
   const trabalhado = regs.reduce((a, d) => a + db.registros[d], 0);
   const metaAcum = accounted.reduce((a, d) => a + metaEfetiva(db, d), 0);
   const faltando = accounted.filter((d) => db.registros[d] == null).length;
@@ -112,7 +126,7 @@ export function OpenMonthBento({
           />
           <DayTable
             db={db}
-            days={accounted.slice().reverse()}
+            days={displayDays.slice().reverse()}
             hoje={hoje}
             monthName={MESES[m - 1]}
             onEdit={(d) => logFormRef.current?.edit(d)}
@@ -151,6 +165,7 @@ export function OpenMonthBento({
             onOpenEscritorio={onOpenEscritorio}
             setPresencial={setPresencial}
           />
+          <FeriasPanel db={db} addFerias={addFerias} removeFerias={removeFerias} />
           <FeriadosPanel db={db} setFeriado={setFeriado} deleteFeriado={deleteFeriado} />
         </aside>
       </div>
