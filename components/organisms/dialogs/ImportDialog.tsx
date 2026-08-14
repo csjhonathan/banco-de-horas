@@ -122,6 +122,11 @@ export function ImportDialog({
               setActive(null);
             }}
           />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Importar deixa o período <strong>idêntico ao Clockify</strong>: dias
+            sem entrada no Clockify são apagados. Reimporte o mesmo período para
+            limpar o que sobrou de uma importação errada.
+          </p>
           {msg && (
             <div
               className={cn(
