@@ -63,6 +63,12 @@ export const API = {
       method: "POST",
       body: JSON.stringify(b || {}),
     }),
+  // Import substitutivo: banco passa a conter SOMENTE a janela [start, end].
+  cfImport: (b: { start: string; end: string }) =>
+    jfetch<SyncResult>("/api/clockify/import", {
+      method: "POST",
+      body: JSON.stringify(b),
+    }),
   cfRunning: () => jfetch<RunningResult>("/api/clockify/running"),
   cfBreakdown: (r?: { start?: string; end?: string }) => {
     const q = new URLSearchParams();

@@ -184,9 +184,10 @@ export function useBancoDeHoras() {
   );
 
   /* ---- Clockify sync ---- */
-  const syncRange = useCallback(
+  // Import SUBSTITUTIVO: o banco passa a conter somente a janela [start, end].
+  const importRange = useCallback(
     async (start: string, end: string): Promise<SyncResult> => {
-      const res = await API.cfSync({ start, end });
+      const res = await API.cfImport({ start, end });
       replaceFromServer(res.state);
       return res;
     },
@@ -282,7 +283,7 @@ export function useBancoDeHoras() {
     setEscritorio,
     checkIn,
     recalibrar,
-    syncRange,
+    importRange,
     syncToday,
     applyClockify,
   };

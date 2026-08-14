@@ -122,6 +122,12 @@ export function ImportDialog({
               setActive(null);
             }}
           />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Importar <strong>substitui o banco inteiro</strong> por este período:
+            fica só o que o Clockify tem em {start || "…"} → {end || "…"}, e tudo
+            fora disso é apagado. Como é 100% Clockify, dá pra reimportar quando
+            quiser.
+          </p>
           {msg && (
             <div
               className={cn(
