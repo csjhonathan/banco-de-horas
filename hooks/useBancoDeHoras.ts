@@ -206,8 +206,9 @@ export function useBancoDeHoras() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      let m: MeResponse;
       try {
-        const m = await API.me();
+        m = await API.me();
         if (!alive) return;
         setMe(m);
       } catch (e) {
@@ -222,6 +223,19 @@ export function useBancoDeHoras() {
       } catch (e) {
         if (e instanceof ApiError && e.status === 401) return handle401();
         setBootError(e instanceof Error ? e.message : "erro ao carregar");
+        return;
+      }
+      // Sync de "hoje" no load (merge-only): traz o Clockify fresco sem esperar
+      // o primeiro tick do auto-refresh (60s). Não bloqueia o boot nem vira
+      // bootError se o Clockify falhar — o tick seguinte tenta de novo.
+      if (alive && m.clockify.configured) {
+        API.cfSync({ start: HOJE, end: HOJE })
+          .then((res) => {
+            if (alive) replaceFromServer(res.state);
+          })
+          .catch((e) => {
+            if (e instanceof ApiError && e.status === 401) handle401();
+          });
       }
     })();
     return () => {
