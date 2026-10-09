@@ -5,12 +5,12 @@ import { credsFrom } from "@/lib/user";
 import * as clockify from "@/lib/clockify";
 import { seed } from "@/lib/seed";
 
-// Import (substituição). Diferente do /sync (que só sobrescreve os dias
-// devolvidos), aqui o banco passa a conter SOMENTE o período importado: os
-// registros viram exatamente o que o Clockify tem em [start, end] e tudo fora
-// disso é descartado. O Clockify é somente-leitura e a fonte da verdade, então
-// reimportar sempre reconstrói. Isolado do auto-refresh/sincronizar-hoje de
-// propósito — aqueles usam [hoje, hoje] e NUNCA podem zerar o banco inteiro.
+// Import (substituição DENTRO da janela). Diferente do /sync (que só
+// sobrescreve os dias devolvidos), aqui o período [start, end] passa a ser
+// exatamente o que o Clockify tem: dias da janela sem entrada no Clockify são
+// apagados. Fora da janela NADA é tocado — importar um dia/mês não mexe no
+// resto do banco. O Clockify é somente-leitura e a fonte da verdade, então
+// reimportar um período sempre o reconstrói.
 export async function POST(req: Request) {
   const username = await currentUsername();
   if (!username) {
@@ -23,9 +23,14 @@ export async function POST(req: Request) {
   const { start, end } = (await req.json().catch(() => ({}))) || {};
   const state = (await getState(username)) || seed();
   const result = await clockify.syncRange(credsFrom(user), { start, end });
-  // Substitui todos os registros pela janela importada (chaves de
-  // result.registros são todas dentro de [start, end]).
-  state.registros = { ...result.registros };
+  // Limpa só os dias dentro da janela e aplica o que o Clockify devolveu
+  // (chaves de result.registros são todas dentro de [start, end]). Datas são
+  // "AAAA-MM-DD", então comparação lexicográfica = cronológica.
+  const { start: from, end: to } = result.range;
+  for (const day of Object.keys(state.registros)) {
+    if (day >= from && day <= to) delete state.registros[day];
+  }
+  Object.assign(state.registros, result.registros);
   await putState(username, state);
   return NextResponse.json({
     state,
