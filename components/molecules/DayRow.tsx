@@ -62,7 +62,8 @@ export function DayRow({
   const [open, setOpen] = useState(false);
   const { tasks, loading, error } = useDayTasks(d, open && canExpand);
 
-  // Sync deste dia (merge-only, igual ao antigo "Sincronizar hoje" do trilho).
+  // Sync deste dia: autoritativo (import de [d, d]) — o dia passa a ser o que o
+  // Clockify tem, e um dia vazio lá apaga o lançamento daqui.
   const [syncing, setSyncing] = useState(false);
   const canSync = !!clockifyConfigured && !!onSyncDay;
   async function doSync() {
@@ -153,7 +154,7 @@ export function DayRow({
               size="sm"
               onClick={doSync}
               disabled={syncing}
-              title={"Sincronizar " + dm(d) + " com o Clockify"}
+              title={"Sincronizar " + dm(d) + " com o Clockify (o dia passa a ser o que está lá)"}
               aria-label={"Sincronizar " + dm(d) + " com o Clockify"}
               className="h-7 px-2 text-xs text-muted-foreground"
             >

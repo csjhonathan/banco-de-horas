@@ -194,16 +194,22 @@ export function useBancoDeHoras() {
     },
     [replaceFromServer],
   );
-  // Sync de um dia (merge-only): traz do Clockify o que houver naquele dia e
-  // sobrescreve só ele. Nunca apaga — é o /sync, não o /import.
+  // Sync de UM dia pelo botão da linha: autoritativo, igual ao import (é um
+  // /import de [day, day]). O dia passa a ser exatamente o que o Clockify tem,
+  // então um dia vazio lá apaga o lançamento aqui. Só roda por clique explícito.
   const syncDay = useCallback(
     async (day: string) => {
-      const res = await API.cfSync({ start: day, end: day });
+      const res = await API.cfImport({ start: day, end: day });
       replaceFromServer(res.state);
     },
     [replaceFromServer],
   );
-  const syncToday = useCallback(() => syncDay(HOJE), [syncDay]);
+  // Sync de "hoje" automático (quando o cronômetro para): merge-only de
+  // propósito — nada que roda sem clique do usuário pode apagar registro.
+  const syncToday = useCallback(async () => {
+    const res = await API.cfSync({ start: HOJE, end: HOJE });
+    replaceFromServer(res.state);
+  }, [replaceFromServer]);
 
   const applyClockify = useCallback((cfg: CfConfigResult) => {
     setMe((prev) => (prev ? { ...prev, clockify: cfg } : prev));
