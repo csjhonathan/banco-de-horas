@@ -29,7 +29,7 @@ export function MonthCard({
   setPresencial,
   addFerias,
   removeFerias,
-  onSyncToday,
+  onSyncDay,
   onOpenImport,
   onOpenClockify,
   onOpenAtestado,
@@ -58,7 +58,7 @@ export function MonthCard({
   setPresencial: (day: string, val: boolean) => void;
   addFerias: (de: string, ate: string) => void;
   removeFerias: (de: string, ate: string) => void;
-  onSyncToday: () => Promise<void>;
+  onSyncDay: (day: string) => Promise<void>;
   onOpenImport: () => void;
   onOpenClockify: () => void;
   onOpenAtestado: (day?: string) => void;
@@ -125,7 +125,7 @@ export function MonthCard({
       addFerias={addFerias}
       removeFerias={removeFerias}
       onShiftMonth={onShiftMonth}
-      onSyncToday={onSyncToday}
+      onSyncDay={onSyncDay}
       onOpenImport={onOpenImport}
       onOpenClockify={onOpenClockify}
       onOpenAtestado={onOpenAtestado}

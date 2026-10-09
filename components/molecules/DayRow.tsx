@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, RefreshCw } from "lucide-react";
 import type { State } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export function DayRow({
   runningSec = 0,
   onEdit,
   onDelete,
+  onSyncDay,
   onTogglePresencial,
   onOpenAtestado,
 }: {
@@ -41,6 +42,7 @@ export function DayRow({
   runningSec?: number;
   onEdit: (d: string) => void;
   onDelete: (d: string) => void;
+  onSyncDay?: (d: string) => Promise<void>;
   onTogglePresencial: (d: string) => void;
   onOpenAtestado: (d: string) => void;
 }) {
@@ -59,6 +61,21 @@ export function DayRow({
   const canExpand = !!clockifyConfigured && has; // tarefas vêm do Clockify
   const [open, setOpen] = useState(false);
   const { tasks, loading, error } = useDayTasks(d, open && canExpand);
+
+  // Sync deste dia (merge-only, igual ao antigo "Sincronizar hoje" do trilho).
+  const [syncing, setSyncing] = useState(false);
+  const canSync = !!clockifyConfigured && !!onSyncDay;
+  async function doSync() {
+    if (!onSyncDay) return;
+    setSyncing(true);
+    try {
+      await onSyncDay(d);
+    } catch (e) {
+      alert("Não consegui sincronizar " + dm(d) + ":\n" + (e instanceof Error ? e.message : ""));
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   return (
     <>
@@ -130,6 +147,20 @@ export function DayRow({
       </td>
       <td className="px-2 py-2.5 text-right">
         <div className="flex justify-end gap-1">
+          {canSync && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={doSync}
+              disabled={syncing}
+              title={"Sincronizar " + dm(d) + " com o Clockify"}
+              aria-label={"Sincronizar " + dm(d) + " com o Clockify"}
+              className="h-7 px-2 text-xs text-muted-foreground"
+            >
+              <RefreshCw className={cn("size-3.5 sm:mr-1", syncing && "animate-spin")} />
+              <span className="hidden sm:inline">sincronizar</span>
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => onEdit(d)} className="h-7 px-2 text-xs text-muted-foreground">
             {hasReal ? "editar" : "lançar"}
           </Button>

@@ -184,7 +184,8 @@ export function useBancoDeHoras() {
   );
 
   /* ---- Clockify sync ---- */
-  // Import SUBSTITUTIVO: o banco passa a conter somente a janela [start, end].
+  // Import substitutivo DENTRO da janela [start, end]: o período vira o que o
+  // Clockify tem (dias vazios lá somem aqui); fora da janela nada muda.
   const importRange = useCallback(
     async (start: string, end: string): Promise<SyncResult> => {
       const res = await API.cfImport({ start, end });
@@ -193,10 +194,16 @@ export function useBancoDeHoras() {
     },
     [replaceFromServer],
   );
-  const syncToday = useCallback(async () => {
-    const res = await API.cfSync({ start: HOJE, end: HOJE });
-    replaceFromServer(res.state);
-  }, [replaceFromServer]);
+  // Sync de um dia (merge-only): traz do Clockify o que houver naquele dia e
+  // sobrescreve só ele. Nunca apaga — é o /sync, não o /import.
+  const syncDay = useCallback(
+    async (day: string) => {
+      const res = await API.cfSync({ start: day, end: day });
+      replaceFromServer(res.state);
+    },
+    [replaceFromServer],
+  );
+  const syncToday = useCallback(() => syncDay(HOJE), [syncDay]);
 
   const applyClockify = useCallback((cfg: CfConfigResult) => {
     setMe((prev) => (prev ? { ...prev, clockify: cfg } : prev));
@@ -298,6 +305,7 @@ export function useBancoDeHoras() {
     checkIn,
     recalibrar,
     importRange,
+    syncDay,
     syncToday,
     applyClockify,
   };

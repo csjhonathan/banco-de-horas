@@ -42,7 +42,7 @@ export function OpenMonthBento({
   addFerias,
   removeFerias,
   onShiftMonth,
-  onSyncToday,
+  onSyncDay,
   onOpenImport,
   onOpenClockify,
   onOpenAtestado,
@@ -67,7 +67,7 @@ export function OpenMonthBento({
   addFerias: (de: string, ate: string) => void;
   removeFerias: (de: string, ate: string) => void;
   onShiftMonth: (ym: string) => void;
-  onSyncToday: () => Promise<void>;
+  onSyncDay: (day: string) => Promise<void>;
   onOpenImport: () => void;
   onOpenClockify: () => void;
   onOpenAtestado: (day?: string) => void;
@@ -156,6 +156,7 @@ export function OpenMonthBento({
             presencialCount={presencialCount}
             onEdit={(d) => logFormRef.current?.edit(d)}
             onDelete={onDelete}
+            onSyncDay={onSyncDay}
             onTogglePresencial={togglePresencial}
             onOpenAtestado={onOpenAtestado}
           />
@@ -179,7 +180,6 @@ export function OpenMonthBento({
           />
           <ClockifyPanel
             me={me}
-            onSyncToday={onSyncToday}
             onOpenImport={onOpenImport}
             onOpenClockify={onOpenClockify}
           />

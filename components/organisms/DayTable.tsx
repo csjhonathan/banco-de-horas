@@ -15,6 +15,7 @@ export function DayTable({
   presencialCount = 0,
   onEdit,
   onDelete,
+  onSyncDay,
   onTogglePresencial,
   onOpenAtestado,
 }: {
@@ -27,6 +28,7 @@ export function DayTable({
   presencialCount?: number;
   onEdit: (d: string) => void;
   onDelete: (d: string) => void;
+  onSyncDay?: (d: string) => Promise<void>;
   onTogglePresencial: (d: string) => void;
   onOpenAtestado: (d: string) => void;
 }) {
@@ -61,6 +63,7 @@ export function DayTable({
                 runningSec={d === hoje ? runningToday : 0}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onSyncDay={onSyncDay}
                 onTogglePresencial={onTogglePresencial}
                 onOpenAtestado={onOpenAtestado}
               />

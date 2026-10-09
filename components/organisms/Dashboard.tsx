@@ -104,7 +104,7 @@ export function Dashboard() {
           setPresencial={banco.setPresencial}
           addFerias={banco.addFerias}
           removeFerias={banco.removeFerias}
-          onSyncToday={banco.syncToday}
+          onSyncDay={banco.syncDay}
           onOpenImport={() => setImportOpen(true)}
           onOpenClockify={() => setClockifyOpen(true)}
           onOpenAtestado={(day) => {

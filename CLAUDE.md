@@ -41,6 +41,7 @@ app/
     me/route.ts                      username + clockify público + webhookUrl
     state/route.ts   reset/route.ts  estado do banco de horas (GET/PUT, reset)
     clockify/config|sync|webhook     integração (SOMENTE LEITURA)
+    clockify/import                  import substitutivo DENTRO da janela (POST)
     clockify/running                 cronômetro em andamento (GET, polling)
     clockify/breakdown               relatório por projeto/cliente/tarefa (GET)
     health/route.ts
@@ -154,6 +155,15 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   `diasContabilizados`/`saldoMes` em `lib/horas.ts`.
 - **Clockify é a fonte da verdade na leitura**: apagar um registro no app é só local;
   um sync que cubra o dia pode trazê-lo de volta.
+- **`/sync` vs `/import`** (os dois só LEEM do Clockify, e a diferença é o que apagam):
+  - `/api/clockify/sync` é **merge-only**: sobrescreve só os dias que o Clockify
+    devolveu, nunca apaga. É o que roda no auto-refresh, no boot e no botão
+    **"sincronizar" de cada linha da tabela** (`syncDay(d)` = sync de `[d, d]`).
+  - `/api/clockify/import` é **substitutivo dentro da janela**: `[start, end]` passa a
+    ser exatamente o que o Clockify tem (dia da janela sem entrada lá é apagado aqui),
+    e **fora da janela nada é tocado**. É o "Importar período".
+  - Nunca faça o `/sync` apagar: ele roda com `[hoje, hoje]` a cada 60s — virar
+    autoritativo já zerou o banco uma vez (ver `9387c11`).
 - **Cronômetro em andamento** (`clockify.runningEntry` → `/api/clockify/running` →
   `useRunningTimer` → `<RunningTimer/>`): SOMENTE LEITURA — só observa o timer rodando
   (`in-progress=true&hydrated=true`, traz projeto/tarefa), **nunca** inicia/para nada. O
