@@ -98,12 +98,24 @@ export function isFerias(state: State, s: string): boolean {
   return !!state.ferias?.[s];
 }
 /**
- * Dia que SERIA de trabalho: dia da semana da jornada e não feriado — ignora o
- * flag de férias. Serve pra contar quantos dias úteis um período de férias
+ * Dia anterior ao início do contrato (`desde` da vigência mais antiga). Com o
+ * sentinela "0000-01-01" nunca é verdade — o histórico todo conta.
+ */
+export function antesDoInicio(state: State, s: string): boolean {
+  const inicio = state.jornadas?.[0]?.desde;
+  return !!inicio && s < inicio;
+}
+/**
+ * Dia que SERIA de trabalho: dia da semana da jornada, não feriado e já dentro
+ * do contrato — ignora o flag de férias. Serve pra contar quantos dias úteis um período de férias
  * cobre (senão a própria marcação de férias zeraria a conta).
  */
 export function isDiaTrabalho(state: State, s: string): boolean {
-  return diasSemanaDe(state, s).includes(parseD(s).getDay()) && !isFeriado(state, s);
+  return (
+    !antesDoInicio(state, s) &&
+    diasSemanaDe(state, s).includes(parseD(s).getDay()) &&
+    !isFeriado(state, s)
+  );
 }
 export function isUtil(state: State, s: string): boolean {
   return isDiaTrabalho(state, s) && !isFerias(state, s);

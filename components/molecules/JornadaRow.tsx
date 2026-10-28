@@ -8,7 +8,7 @@ import { fmtJornada } from "@/lib/horas";
 
 /** Uma linha do editor de jornada (uma vigência). */
 export type JornadaDraft = {
-  desde: string; // "" na primeira vigência (vale "desde o início")
+  desde: string; // na primeira vigência: início do contrato, ou "" (vale desde sempre)
   metaHM: string; // "HH:MM"
   dias: number[];
 };
@@ -25,7 +25,7 @@ export function JornadaRow({
   onRemove,
 }: {
   value: JornadaDraft;
-  first: boolean; // a vigência mais antiga não tem data (vale desde sempre)
+  first: boolean; // a vigência mais antiga: data = início do contrato (opcional)
   onChange: (next: JornadaDraft) => void;
   onRemove?: () => void;
 }) {
@@ -35,21 +35,20 @@ export function JornadaRow({
   return (
     <div className="relative flex flex-col gap-3 rounded-lg border border-border bg-card px-3.5 py-3">
       <div className="flex items-center justify-between gap-3">
-        {first ? (
-          <span className="text-xs font-medium text-muted-foreground">
-            Vigência inicial · vale desde o começo do histórico
-          </span>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground">A partir de</Label>
-            <Input
-              type="date"
-              value={value.desde}
-              onChange={(e) => onChange({ ...value, desde: e.target.value })}
-              className="h-8 w-[150px]"
-            />
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Label className="text-xs text-muted-foreground">
+            {first ? "Início do contrato" : "A partir de"}
+          </Label>
+          <Input
+            type="date"
+            value={value.desde}
+            onChange={(e) => onChange({ ...value, desde: e.target.value })}
+            className="h-8 w-[150px]"
+          />
+          {first && !value.desde && (
+            <span className="text-xs text-faint">vazio = desde o começo do histórico</span>
+          )}
+        </div>
         {onRemove && (
           <button
             type="button"

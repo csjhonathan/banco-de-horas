@@ -3,7 +3,8 @@ import type { Jornada, State } from "@/types";
 
 export const FERIADOS_VER = 2;
 
-// `desde` da vigência mais antiga: sentinela que cobre todo o histórico.
+// `desde` da vigência mais antiga quando não há data de início do contrato:
+// sentinela que cobre todo o histórico.
 const DESDE_SEMPRE = "0000-01-01";
 
 /**
@@ -78,8 +79,9 @@ function jornadaValida(j: unknown): j is Jornada {
 
 /**
  * Normaliza uma lista de vigências: descarta inválidas, ordena por `desde` e
- * garante ao menos uma (usando o fallback). A vigência mais antiga é rebaixada
- * para o sentinela "desde sempre" para cobrir todo o histórico.
+ * garante ao menos uma (usando o fallback). O `desde` da vigência mais antiga é
+ * o início do contrato (dias antes dele não contam meta) — ou o sentinela
+ * "desde sempre" quando não há data de início.
  */
 export function normalizeJornadas(
   list: unknown,
@@ -88,7 +90,6 @@ export function normalizeJornadas(
   const arr = (Array.isArray(list) ? list : []).filter(jornadaValida);
   arr.sort((a, b) => a.desde.localeCompare(b.desde));
   if (!arr.length) return [{ ...fallback, desde: DESDE_SEMPRE }];
-  arr[0] = { ...arr[0], desde: DESDE_SEMPRE };
   return arr;
 }
 

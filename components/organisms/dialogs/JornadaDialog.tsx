@@ -20,9 +20,13 @@ function parseHM(str: string): number {
   return (parseInt(p[0], 10) || 0) * 3600 + (parseInt(p[1], 10) || 0) * 60;
 }
 
+// `desde` da vigência inicial sem data de início do contrato (vale desde sempre).
+const DESDE_SEMPRE = "0000-01-01";
+
 function toDraft(j: Jornada, first: boolean): JornadaDraft {
   const [hh, mm] = secToHMSParts(j.metaDiaSec);
-  return { desde: first ? "" : j.desde, metaHM: `${hh}:${mm}`, dias: [...j.diasSemana] };
+  const desde = first && j.desde === DESDE_SEMPRE ? "" : j.desde;
+  return { desde, metaHM: `${hh}:${mm}`, dias: [...j.diasSemana] };
 }
 
 export function JornadaDialog({
@@ -45,7 +49,7 @@ export function JornadaDialog({
     if (!open) return;
     const js = db.jornadas?.length
       ? db.jornadas
-      : [{ desde: "0000-01-01", metaDiaSec: db.metaDiaSec, diasSemana: db.diasSemana }];
+      : [{ desde: DESDE_SEMPRE, metaDiaSec: db.metaDiaSec, diasSemana: db.diasSemana }];
     setRows(js.map((j, i) => toDraft(j, i === 0)));
     setError("");
   }, [open, db.jornadas, db.metaDiaSec, db.diasSemana]);
@@ -80,6 +84,15 @@ export function JornadaDialog({
         return;
       }
     }
+    const inicio = rows[0]?.desde ?? "";
+    if (inicio && !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) {
+      setError("Data de início do contrato inválida.");
+      return;
+    }
+    if (inicio && dated.some((r) => r.desde <= inicio)) {
+      setError("As vigências adicionais precisam começar depois do início do contrato.");
+      return;
+    }
     const datas = dated.map((r) => r.desde);
     if (new Set(datas).size !== datas.length) {
       setError("Duas vigências não podem começar no mesmo dia.");
@@ -87,7 +100,7 @@ export function JornadaDialog({
     }
 
     const jornadas: Jornada[] = rows.map((r, i) => ({
-      desde: i === 0 ? "0000-01-01" : r.desde,
+      desde: i === 0 ? r.desde || DESDE_SEMPRE : r.desde,
       metaDiaSec: parseHM(r.metaHM),
       diasSemana: [...r.dias],
     }));
@@ -106,6 +119,8 @@ export function JornadaDialog({
             Cada vigência vale a partir da sua data até a próxima começar. Mudou de
             jornada (promoção, novo contrato)? Adicione uma vigência com a data da
             virada — o histórico anterior continua contando pela jornada antiga.
+            Informe o início do contrato para que os dias antes dele não contem
+            como débito.
           </p>
 
           <div className="flex max-h-[52vh] flex-col gap-2.5 overflow-y-auto pr-1 thin-scroll">

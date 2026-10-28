@@ -128,6 +128,9 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   cálculo — `metaDia`/`isUtil` já roteiam pela vigência do dia. `metaDiaSec`/`diasSemana`
   no topo do state são só **espelho da vigência de hoje** (rótulo da TopBar + compat de
   backup antigo); quem escreve jornadas (`setJornadas` no hook) mantém o espelho em dia.
+- **Início do contrato = `desde` da vigência mais antiga.** Dias antes dele não são
+  úteis (`antesDoInicio` → `isDiaTrabalho` false), então não geram débito. Sem data de
+  início, a primeira vigência usa o sentinela `"0000-01-01"` (vale desde sempre).
 - **Dias úteis vêm da vigência do dia** (`diasSemana`, 0=dom…6=sáb), **não** "seg–sex"
   fixo — `isUtil` checa esse conjunto + feriados. Meta do mês = **soma dia a dia**
   (`metaMesSec`), não `dias × metaDiaSec`, pra aguentar virada de vigência no meio do mês.
