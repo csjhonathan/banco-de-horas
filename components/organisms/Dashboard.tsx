@@ -147,6 +147,7 @@ export function Dashboard() {
         onOpenChange={setImportOpen}
         viewYM={viewYM}
         hoje={banco.HOJE}
+        registros={db.registros}
         onSync={banco.importRange}
       />
       <ClockifyDialog

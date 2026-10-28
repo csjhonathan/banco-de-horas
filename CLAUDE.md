@@ -166,6 +166,9 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
     ser exatamente o que o Clockify tem (dia da janela sem entrada lá é apagado aqui),
     e **fora da janela nada é tocado**. É o "Importar período" e também o botão
     **"sincronizar" de cada linha** (`syncDay(d)` = import de `[d, d]`).
+  - Opt-in `apagarFora` (checkbox + confirmação no `ImportDialog`): o import também
+    apaga os `registros` **fora** da janela (banco = só o período). Só `registros` —
+    o resto do state fica intacto. Nada automático passa essa flag.
   - A linha divisória é **clique do usuário**: só ação explícita pode apagar registro;
     o que roda em background é sempre merge.
   - Nunca faça o `/sync` apagar: ele roda com `[hoje, hoje]` a cada 60s — virar

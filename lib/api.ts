@@ -38,6 +38,7 @@ export interface SyncResult {
   days: number;
   count: number;
   range: { start: string; end: string };
+  removidosFora?: number; // só no /import com apagarFora
 }
 
 export interface CfConfigResult extends ClockifyPublic {
@@ -63,8 +64,9 @@ export const API = {
       method: "POST",
       body: JSON.stringify(b || {}),
     }),
-  // Import substitutivo: banco passa a conter SOMENTE a janela [start, end].
-  cfImport: (b: { start: string; end: string }) =>
+  // Import substitutivo DENTRO da janela [start, end]; com `apagarFora`, apaga
+  // também os lançamentos fora dela (banco = só a janela).
+  cfImport: (b: { start: string; end: string; apagarFora?: boolean }) =>
     jfetch<SyncResult>("/api/clockify/import", {
       method: "POST",
       body: JSON.stringify(b),

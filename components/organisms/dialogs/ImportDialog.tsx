@@ -34,13 +34,15 @@ export function ImportDialog({
   onOpenChange,
   viewYM,
   hoje,
+  registros,
   onSync,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   viewYM: string;
   hoje: string;
-  onSync: (start: string, end: string) => Promise<SyncResult>;
+  registros: Record<string, number>;
+  onSync: (start: string, end: string, apagarFora: boolean) => Promise<SyncResult>;
 }) {
   const ranges = useMemo<Record<string, () => [string, string]>>(
     () => ({
@@ -66,6 +68,19 @@ export function ImportDialog({
   const [active, setActive] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [apagarFora, setApagarFora] = useState(false);
+  // 1º clique com "apagar fora" só arma a confirmação; o 2º executa.
+  const [confirmando, setConfirmando] = useState(false);
+
+  const foraCount = useMemo(
+    () =>
+      start && end
+        ? Object.keys(registros).filter((d) => d < start || d > end).length
+        : 0,
+    [registros, start, end],
+  );
+
+  useEffect(() => setConfirmando(false), [start, end, apagarFora]);
 
   useEffect(() => {
     if (open) {
@@ -74,6 +89,7 @@ export function ImportDialog({
       setEnd(e);
       setActive("mes-visto");
       setMsg(null);
+      setApagarFora(false);
     }
   }, [open, ranges]);
 
@@ -87,14 +103,20 @@ export function ImportDialog({
   async function go() {
     if (!start || !end) return setMsg({ text: "Escolha o período.", ok: false });
     if (start > end) return setMsg({ text: "A data inicial está depois da final.", ok: false });
+    const apagar = apagarFora && foraCount > 0;
+    if (apagar && !confirmando) return setConfirmando(true);
     setBusy(true);
     setMsg(null);
     try {
-      const res = await onSync(start, end);
+      const res = await onSync(start, end, apagar);
+      const removidos = res.removidosFora
+        ? ` · ${res.removidosFora} lançamento(s) fora do período apagado(s)`
+        : "";
       setMsg({
-        text: `${res.days} dia(s) importado(s) · ${res.count} entrada(s) de ${res.range.start} a ${res.range.end}.`,
+        text: `${res.days} dia(s) importado(s) · ${res.count} entrada(s) de ${res.range.start} a ${res.range.end}${removidos}.`,
         ok: true,
       });
+      setApagarFora(false);
     } catch (e) {
       setMsg({ text: e instanceof Error ? e.message : "erro ao importar", ok: false });
     } finally {
@@ -125,8 +147,34 @@ export function ImportDialog({
           <p className="mt-2 text-xs text-muted-foreground">
             Importar <strong>substitui só este período</strong>: de {start || "…"} a{" "}
             {end || "…"} fica exatamente o que o Clockify tem (dias sem entrada lá
-            são apagados aqui). Lançamentos fora da janela não são tocados.
+            são apagados aqui).{" "}
+            {apagarFora
+              ? "Lançamentos fora da janela também serão apagados."
+              : "Lançamentos fora da janela não são tocados."}
           </p>
+          <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={apagarFora}
+              onChange={(e) => setApagarFora(e.target.checked)}
+              className="mt-0.5 size-3.5 accent-destructive"
+            />
+            <span>
+              <span className="font-medium text-foreground">
+                Apagar lançamentos fora deste período
+              </span>
+              <span className="block text-muted-foreground">
+                Só os lançamentos — jornada, férias, atestados, feriados, presença e
+                meses fechados ficam como estão.
+              </span>
+            </span>
+          </label>
+          {confirmando && (
+            <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              Isso vai apagar <strong>{foraCount} lançamento(s)</strong> fora de{" "}
+              {start} a {end}. Clique em “Confirmar” para continuar.
+            </div>
+          )}
           {msg && (
             <div
               className={cn(
@@ -139,8 +187,12 @@ export function ImportDialog({
           )}
         </DialogBody>
         <DialogFooter>
-          <Button onClick={go} loading={busy}>
-            Importar
+          <Button
+            onClick={go}
+            loading={busy}
+            variant={confirmando ? "destructive" : "default"}
+          >
+            {confirmando ? `Confirmar e apagar ${foraCount}` : "Importar"}
           </Button>
         </DialogFooter>
       </DialogContent>

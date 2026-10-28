@@ -185,10 +185,11 @@ export function useBancoDeHoras() {
 
   /* ---- Clockify sync ---- */
   // Import substitutivo DENTRO da janela [start, end]: o período vira o que o
-  // Clockify tem (dias vazios lá somem aqui); fora da janela nada muda.
+  // Clockify tem (dias vazios lá somem aqui); fora da janela nada muda — a não
+  // ser com `apagarFora`, opt-in explícito do diálogo, que apaga o resto.
   const importRange = useCallback(
-    async (start: string, end: string): Promise<SyncResult> => {
-      const res = await API.cfImport({ start, end });
+    async (start: string, end: string, apagarFora = false): Promise<SyncResult> => {
+      const res = await API.cfImport({ start, end, apagarFora });
       replaceFromServer(res.state);
       return res;
     },
