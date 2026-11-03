@@ -12,6 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { JornadaRow, type JornadaDraft } from "@/components/molecules/JornadaRow";
 import { secToHMSParts } from "@/lib/horas";
 
@@ -40,9 +42,10 @@ export function JornadaDialog({
   onOpenChange: (v: boolean) => void;
   db: State;
   hoje: string;
-  onSave: (jornadas: Jornada[]) => void;
+  onSave: (jornadas: Jornada[], inicioBanco: string | null) => void;
 }) {
   const [rows, setRows] = useState<JornadaDraft[]>([]);
+  const [inicioBanco, setInicioBanco] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -51,8 +54,9 @@ export function JornadaDialog({
       ? db.jornadas
       : [{ desde: DESDE_SEMPRE, metaDiaSec: db.metaDiaSec, diasSemana: db.diasSemana }];
     setRows(js.map((j, i) => toDraft(j, i === 0)));
+    setInicioBanco(db.inicioBanco ?? "");
     setError("");
-  }, [open, db.jornadas, db.metaDiaSec, db.diasSemana]);
+  }, [open, db.jornadas, db.metaDiaSec, db.diasSemana, db.inicioBanco]);
 
   function updateRow(i: number, next: JornadaDraft) {
     setRows((rs) => rs.map((r, idx) => (idx === i ? next : r)));
@@ -93,6 +97,14 @@ export function JornadaDialog({
       setError("As vigências adicionais precisam começar depois do início do contrato.");
       return;
     }
+    if (inicioBanco && !/^\d{4}-\d{2}-\d{2}$/.test(inicioBanco)) {
+      setError("Data de início do banco de horas inválida.");
+      return;
+    }
+    if (inicioBanco && inicio && inicioBanco < inicio) {
+      setError("O banco de horas não pode começar antes do contrato.");
+      return;
+    }
     const datas = dated.map((r) => r.desde);
     if (new Set(datas).size !== datas.length) {
       setError("Duas vigências não podem começar no mesmo dia.");
@@ -104,7 +116,7 @@ export function JornadaDialog({
       metaDiaSec: parseHM(r.metaHM),
       diasSemana: [...r.dias],
     }));
-    onSave(jornadas);
+    onSave(jornadas, inicioBanco || null);
     onOpenChange(false);
   }
 
@@ -139,6 +151,25 @@ export function JornadaDialog({
             <Plus className="size-4" />
             Nova vigência
           </Button>
+
+          <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-card px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Label className="text-xs text-muted-foreground">Início do banco de horas</Label>
+              <Input
+                type="date"
+                value={inicioBanco}
+                onChange={(e) => setInicioBanco(e.target.value)}
+                className="h-8 w-[150px]"
+              />
+              {!inicioBanco && (
+                <span className="text-xs text-faint">vazio = o histórico todo conta</span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Lançamentos antes dessa data ficam só como histórico — não entram no
+              saldo acumulado.
+            </p>
+          </div>
 
           <div className="min-h-4 text-xs font-semibold text-destructive">{error}</div>
         </DialogBody>

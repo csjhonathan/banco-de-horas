@@ -69,6 +69,13 @@ export interface State {
   presencial: Record<string, boolean>; // "AAAA-MM-DD" -> foi ao escritório
   ferias: Record<string, boolean>; // "AAAA-MM-DD" -> dia de férias (não conta meta/débito)
   escritorio: EscritorioConfig | null;
+  /**
+   * Início do banco de horas ("AAAA-MM-DD"), opcional. Dias antes dele ficam só
+   * como histórico (aparecem na tabela) mas NÃO entram no saldo — nem crédito
+   * nem débito. Diferente do início do contrato (`jornadas[0].desde`), que diz
+   * quando os dias passam a ser úteis. Ausente = o histórico todo conta.
+   */
+  inicioBanco?: string | null;
 }
 
 /** Documento do usuário no Mongo (um por usuário). */

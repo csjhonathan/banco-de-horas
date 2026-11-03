@@ -76,7 +76,7 @@ export function useBancoDeHoras() {
     [commit, dbRef],
   );
   const setJornadas = useCallback(
-    (jornadas: Jornada[]) => {
+    (jornadas: Jornada[], inicioBanco: string | null) => {
       const cur = dbRef.current!;
       const fallback: Jornada = {
         desde: "0000-01-01",
@@ -91,6 +91,7 @@ export function useBancoDeHoras() {
         jornadas: norm,
         metaDiaSec: atual.metaDiaSec,
         diasSemana: [...atual.diasSemana],
+        inicioBanco,
       });
     },
     [commit, dbRef],

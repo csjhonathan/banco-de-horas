@@ -186,10 +186,21 @@ export function fechadoMeta(state: State, f: MesFechado): number {
 export function fechadoSaldo(state: State, f: MesFechado): number {
   return f.trab - fechadoMeta(state, f);
 }
+/**
+ * Dia dentro do banco de horas (`inicioBanco <= dia`). Sem `inicioBanco`, todo
+ * dia conta. Dias antes dele são só histórico: aparecem na tabela, mas ficam
+ * fora do saldo (nem crédito nem débito).
+ */
+export function noBanco(state: State, s: string): boolean {
+  return !state.inicioBanco || s >= state.inicioBanco;
+}
+// meses que entram no saldo geral: os conhecidos (fechados + com lançamento) a
+// partir do mês do início do banco.
 export function mesConhecidoList(state: State): string[] {
   const set = new Set(state.fechados.map((f) => f.ym));
   Object.keys(state.registros).forEach((d) => set.add(d.slice(0, 7)));
-  return [...set].sort();
+  const ymInicio = state.inicioBanco?.slice(0, 7) ?? "";
+  return [...set].filter((ym) => ym >= ymInicio).sort();
 }
 // dias que entram no saldo do mês: os LANÇADOS + os dias úteis que já
 // passaram (mesmo sem lançamento -> contam como -meta de débito). Hoje e o
@@ -201,12 +212,15 @@ export function diasContabilizados(state: State, ym: string, hoje: string): stri
   for (const d of diasDoMes(ym)) if (isUtil(state, d) && d < hoje) set.add(d);
   return [...set].sort();
 }
+// saldo do mês que entra no banco: mês antes do início do banco vale 0; no mês
+// do início, só os dias a partir dele.
 export function saldoMes(state: State, ym: string, hoje: string): number {
+  if (state.inicioBanco && ym < state.inicioBanco.slice(0, 7)) return 0;
   const f = state.fechados.find((x) => x.ym === ym);
   if (f) return fechadoSaldo(state, f);
   let s = 0;
   for (const d of diasContabilizados(state, ym, hoje))
-    s += (state.registros[d] || 0) - metaEfetiva(state, d);
+    if (noBanco(state, d)) s += (state.registros[d] || 0) - metaEfetiva(state, d);
   return s;
 }
 export function saldoGeral(state: State, hoje: string): number {

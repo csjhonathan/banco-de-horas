@@ -115,7 +115,8 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   registros: {"AAAA-MM-DD": segundos}, feriados: {"AAAA-MM-DD": nome},
   atestados: {"AAAA-MM-DD": segundos}, presencial: {"AAAA-MM-DD": true},
   ferias: {"AAAA-MM-DD": true},
-  escritorio: { lat, lng, raioM, label } | null }
+  escritorio: { lat, lng, raioM, label } | null,
+  inicioBanco?: "AAAA-MM-DD" | null }                              // corte do saldo (opcional)
 ```
 
 ## Pontos não óbvios (leia antes de mexer)
@@ -131,6 +132,13 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
 - **Início do contrato = `desde` da vigência mais antiga.** Dias antes dele não são
   úteis (`antesDoInicio` → `isDiaTrabalho` false), então não geram débito. Sem data de
   início, a primeira vigência usa o sentinela `"0000-01-01"` (vale desde sempre).
+- **Início do banco (`inicioBanco`) ≠ início do contrato.** O contrato diz quando os
+  dias passam a ser úteis; o banco diz a partir de quando o saldo acumula. Dias antes
+  de `inicioBanco` continuam em `registros` e aparecem na tabela (histórico), mas
+  `saldoMes` os ignora (mês anterior vale 0; no mês do início, só os dias `>=`) e
+  `mesConhecidoList` corta os meses anteriores — então `saldoGeral`/`carryIn`/a linha
+  do tempo do `HeroSaldo` já respeitam o corte. Editado no `JornadaDialog`. Permite
+  importar o histórico inteiro do Clockify sem que ele entre no saldo.
 - **Dias úteis vêm da vigência do dia** (`diasSemana`, 0=dom…6=sáb), **não** "seg–sex"
   fixo — `isUtil` checa esse conjunto + feriados. Meta do mês = **soma dia a dia**
   (`metaMesSec`), não `dias × metaDiaSec`, pra aguentar virada de vigência no meio do mês.
