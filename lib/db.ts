@@ -1,6 +1,6 @@
 // Conexão com o MongoDB — com cache de client para sobreviver a hot reloads
 // (dev) e reuso entre invocações serverless (Vercel). Acesso por usuário.
-import { MongoClient, type Collection } from "mongodb";
+import { MongoClient, type Collection, type Db } from "mongodb";
 import type { State, UserDoc } from "@/types";
 
 const URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017";
@@ -21,9 +21,14 @@ function clientPromise(): Promise<MongoClient> {
   return globalForMongo._mongoClientPromise;
 }
 
-async function users(): Promise<Collection<UserDoc>> {
+/** O banco do app (outras coleções além de `usuarios`: OAuth/MCP). */
+export async function database(): Promise<Db> {
   const client = await clientPromise();
-  return client.db(DB_NAME).collection<UserDoc>(COLL);
+  return client.db(DB_NAME);
+}
+
+async function users(): Promise<Collection<UserDoc>> {
+  return (await database()).collection<UserDoc>(COLL);
 }
 
 /* ---- usuários ---- */

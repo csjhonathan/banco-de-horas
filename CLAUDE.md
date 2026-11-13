@@ -45,6 +45,11 @@ app/
     clockify/running                 cronômetro em andamento (GET, polling)
     clockify/breakdown               relatório por projeto/cliente/tarefa (GET)
     health/route.ts
+    mcp/route.ts                     servidor MCP (Streamable HTTP, stateless, Bearer OAuth)
+    mcp/acessos/route.ts             apps autorizados + últimas chamadas (GET), revogar (DELETE)
+    oauth/{register,authorize,token,revoke,consent}  servidor OAuth 2.1 do MCP
+  .well-known/oauth-{authorization-server,protected-resource}/[[...path]]  descoberta (RFC 8414/9728)
+  autorizar/page.tsx                 tela de consentimento do OAuth (exige login)
 auth.ts  auth.config.ts  middleware.ts
 lib/
   db.ts        Mongo (cache serverless) + acesso por usuário
@@ -64,12 +69,13 @@ hooks/
   useBreakdown.ts     busca o relatório por projeto/cliente/tarefa (lazy)
   useDayTasks.ts      tarefas de um dia (breakdown com start=end=dia, lazy)
   useBackup.ts        export/import (JSON+CSV) e reset
+  useMcpAccess.ts     apps autorizados no MCP / auditoria / revogar
 components/            Atomic Design
   ui/                  ATOMS = shadcn (button, input, label, card, dialog, tabs)
   molecules/           SaldoValue, StatTile, TimeInput, DayRow, MonthNav, SecretRow…
   organisms/           TopBar, HeroSaldo, RunningTimer, MonthCard, OpenMonthBento,
                        ClosedMonthView, LogForm, DayTable, FeriasPanel, FeriadosPanel,
-                       ReportsView, LoginForm, Dashboard,
+                       ReportsView, LoginForm, ConsentCard, Dashboard, dialogs/McpDialog,
                        dialogs/{Jornada,Import,Clockify}Dialog
                        molecules de gráfico: {Bar,List,Donut}Breakdown
 ```
@@ -220,6 +226,36 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
   re-salvam).
 - **Env essenciais**: `MONGO_URI` e `AUTH_SECRET` (ver `.env.example`). A chave do
   Clockify **não** vai no `.env` — cada usuário cadastra a dela pela tela.
+
+## Servidor MCP (IA) — SOMENTE LEITURA
+
+Porte do MCP do Pista Livre, enxugado: só o servidor MCP (sem chat/agente interno).
+
+- **`/api/mcp`**: Streamable HTTP **stateless** (`WebStandardStreamableHTTPServerTransport`,
+  respostas JSON), `@modelcontextprotocol/sdk` com `Server` de baixo nível. Sem Bearer →
+  401 com `WWW-Authenticate: Bearer resource_metadata=…`. Rate limit 120/min por
+  autorização (memória, por instância).
+- **OAuth 2.1 próprio** (`lib/oauth/`): registro dinâmico (RFC 7591; redirect só https
+  ou http loopback, qualquer porta no loopback), PKCE S256 obrigatório, código de uso
+  único (5 min), access 1 h + refresh 30 dias **rotativo**. Só hashes no Mongo
+  (`oauth_clients`, `oauth_grants`, `oauth_codes`, `oauth_tokens`, índices TTL). Reuso
+  de código ou de refresh antigo **revoga a autorização inteira**. Erros por formato
+  (`isOAuthError`), nunca `instanceof`.
+- **Consentimento**: `/api/oauth/authorize` confere e manda pra `/autorizar` (página;
+  sem sessão → `/login?callbackUrl=…`, que só aceita caminho interno). A decisão vai
+  em `POST /api/oauth/consent` (sessão do NextAuth). `/autorizar` não abre em iframe.
+- **Issuer/endereço**: `APP_URL` ou deduzido do request (`publicOrigin`).
+- **Ferramentas** (`lib/mcp/tools.ts`, todas `readOnlyHint`): `resumo_do_banco`,
+  `saldo_por_mes`, `extrato_do_mes`, `ver_dia`, `cronometro`, `relatorio_de_horas`,
+  `calendario`. As contas saem de `lib/horas.ts` no servidor (o modelo só repassa).
+  `lib/mcp/contexto.ts` monta uma camada **ao vivo só em memória**: mês corrente do
+  Clockify em merge (igual ao `/sync`) + cronômetro somado em hoje. **O MCP nunca grava**
+  (nem no state, nem no Clockify) — não acrescente escrita sem decisão do dono.
+- **Auditoria** (`lib/mcp/audit.ts`, coleção `mcp_audit`, TTL 90 dias): toda mensagem
+  JSON-RPC, entrada/saída de cada ferramenta (cortadas em 20 mil caracteres), eventos
+  do OAuth; segredos sempre `***`. A UI ("IA" na TopBar → `McpDialog`) mostra endereço,
+  passo a passo por cliente, apps autorizados (revogar) e últimas consultas.
+- Ao criar dado novo no state, avalie expor numa ferramenta (e na `INSTRUCOES`).
 
 ## Deploy
 

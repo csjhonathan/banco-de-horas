@@ -3,6 +3,7 @@
 import type {
   BreakdownResult,
   ClockifyPublic,
+  McpAccess,
   MeResponse,
   RunningResult,
   State,
@@ -79,4 +80,10 @@ export const API = {
     const qs = q.toString();
     return jfetch<BreakdownResult>(`/api/clockify/breakdown${qs ? `?${qs}` : ""}`);
   },
+  // MCP: endereço, apps autorizados (OAuth) e últimas chamadas; revogar app.
+  mcpAccess: () => jfetch<McpAccess>("/api/mcp/acessos"),
+  mcpRevoke: (id: string) =>
+    jfetch<{ ok: true }>(`/api/mcp/acessos?id=${encodeURIComponent(id)}`, { method: "DELETE" }),
+  oauthConsent: (b: Record<string, string>) =>
+    jfetch<{ redirectTo: string }>("/api/oauth/consent", { method: "POST", body: JSON.stringify(b) }),
 };

@@ -156,3 +156,30 @@ export interface MeResponse {
   webhookUrl: string;
   allowRegister: boolean;
 }
+
+/** Um app autorizado a usar o MCP em nome do usuário (OAuth). */
+export interface McpGrant {
+  id: string;
+  clientName: string;
+  createdAt: string; // ISO
+  lastUsedAt: string | null; // ISO
+}
+
+/** Uma linha da auditoria do MCP/OAuth (sem entrada/saída). */
+export interface McpCall {
+  id: string;
+  method: string; // "tools/call", "initialize", "consent.approve"…
+  tool: string | null;
+  clientName: string | null;
+  ok: boolean;
+  error: string | null;
+  durationMs: number;
+  createdAt: string; // ISO
+}
+
+/** Resposta de /api/mcp/acessos. */
+export interface McpAccess {
+  mcpUrl: string;
+  grants: McpGrant[];
+  calls: McpCall[];
+}

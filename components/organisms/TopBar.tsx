@@ -14,6 +14,7 @@ export function TopBar({
   saveStatus,
   onOpenJornada,
   onOpenClockify,
+  onOpenMcp,
   onLogout,
 }: {
   me: MeResponse;
@@ -21,6 +22,7 @@ export function TopBar({
   saveStatus: SaveStatus;
   onOpenJornada: () => void;
   onOpenClockify: () => void;
+  onOpenMcp: () => void;
   onLogout: () => void;
 }) {
   return (
@@ -38,6 +40,9 @@ export function TopBar({
         <SaveIndicator status={saveStatus} />
         <Button variant="secondary" size="sm" onClick={onOpenClockify}>
           Clockify
+        </Button>
+        <Button variant="secondary" size="sm" onClick={onOpenMcp}>
+          IA
         </Button>
         <ThemeToggle />
         <span className="hidden px-1 text-sm text-muted-foreground sm:inline">@{me.username}</span>

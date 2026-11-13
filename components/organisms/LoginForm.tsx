@@ -10,7 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogoMark, Wordmark } from "@/components/molecules/Logo";
 
-export function LoginForm({ allowRegister }: { allowRegister: boolean }) {
+export function LoginForm({
+  allowRegister,
+  callbackUrl = "/",
+}: {
+  allowRegister: boolean;
+  callbackUrl?: string;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
@@ -42,7 +48,7 @@ export function LoginForm({ allowRegister }: { allowRegister: boolean }) {
         redirect: false,
       });
       if (res?.error) throw new Error("usuário ou senha inválidos");
-      router.push("/");
+      router.push(callbackUrl);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "erro inesperado");

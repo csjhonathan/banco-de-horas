@@ -14,6 +14,7 @@ import { AtestadoDialog } from "./dialogs/AtestadoDialog";
 import { EscritorioDialog } from "./dialogs/EscritorioDialog";
 import { ImportDialog } from "./dialogs/ImportDialog";
 import { ClockifyDialog } from "./dialogs/ClockifyDialog";
+import { McpDialog } from "./dialogs/McpDialog";
 
 /** Container do app: fia os hooks de estado aos organismos e diálogos. */
 export function Dashboard() {
@@ -25,6 +26,7 @@ export function Dashboard() {
   const [importOpen, setImportOpen] = useState(false);
   const [clockifyOpen, setClockifyOpen] = useState(false);
   const [escritorioOpen, setEscritorioOpen] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
   const [view, setView] = useState<"mes" | "relatorios">("mes");
 
   const timer = useRunningTimer(
@@ -35,10 +37,10 @@ export function Dashboard() {
 
   useEffect(() => {
     banco.setDialogsOpen(
-      jornadaOpen || atestadoOpen || importOpen || clockifyOpen || escritorioOpen,
+      jornadaOpen || atestadoOpen || importOpen || clockifyOpen || escritorioOpen || mcpOpen,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jornadaOpen, atestadoOpen, importOpen, clockifyOpen, escritorioOpen]);
+  }, [jornadaOpen, atestadoOpen, importOpen, clockifyOpen, escritorioOpen, mcpOpen]);
 
   async function logout() {
     await signOut({ redirect: false });
@@ -76,6 +78,7 @@ export function Dashboard() {
           saveStatus={banco.saveStatus}
           onOpenJornada={() => setJornadaOpen(true)}
           onOpenClockify={() => setClockifyOpen(true)}
+          onOpenMcp={() => setMcpOpen(true)}
           onLogout={logout}
         />
         <HeroSaldo db={liveDb} hoje={banco.HOJE} />
@@ -161,6 +164,7 @@ export function Dashboard() {
         }}
         on401={banco.handle401}
       />
+      <McpDialog open={mcpOpen} onOpenChange={setMcpOpen} on401={banco.handle401} />
     </>
   );
 }
