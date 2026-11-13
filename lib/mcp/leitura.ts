@@ -1,75 +1,28 @@
-// Catálogo de ferramentas do MCP — TODAS SOMENTE LEITURA. As contas (saldo,
-// meta, quanto falta) são feitas aqui no servidor com a mesma lógica do app
-// (`lib/horas.ts`); o modelo só repassa. Nada grava no app nem no Clockify.
+// Ferramentas de LEITURA do MCP. As contas (saldo, meta, quanto falta) são
+// feitas aqui no servidor com a mesma lógica do app (`lib/horas.ts`); o modelo
+// só repassa. Nada aqui grava.
 import * as clockify from "@/lib/clockify";
 import { credsFrom } from "@/lib/user";
 import {
-  MESES,
   SEMANAS,
   agruparPeriodos,
-  antesDoInicio,
   atestadoDe,
   carryIn,
   diasContabilizados,
   diasDoMes,
   fechadoMeta,
   fmtJornada,
-  isFerias,
   isUtil,
   jornadaDe,
   mesConhecidoList,
   metaDia,
   metaEfetiva,
   noBanco,
-  parseD,
   saldoGeral,
   saldoMes,
 } from "@/lib/horas";
 import { TZ, carregarContexto, hm, saldo, type Contexto } from "./contexto";
-import type { State } from "@/types";
-
-export interface McpTool {
-  name: string;
-  title: string;
-  description: string;
-  inputSchema: { type: "object"; properties: Record<string, unknown>; required?: string[] };
-  run(args: Record<string, unknown>, username: string): Promise<unknown>;
-}
-
-/** Erro de entrada: vira `isError` com a mensagem pro modelo corrigir. */
-export class ToolInputError extends Error {}
-
-const RE_DIA = /^\d{4}-\d{2}-\d{2}$/;
-const RE_MES = /^\d{4}-\d{2}$/;
-
-function argDia(args: Record<string, unknown>, key: string, fallback?: string): string {
-  const v = args[key];
-  if (v === undefined || v === null || v === "") {
-    if (fallback !== undefined) return fallback;
-    throw new ToolInputError(`Informe "${key}" (AAAA-MM-DD).`);
-  }
-  if (typeof v !== "string" || !RE_DIA.test(v)) throw new ToolInputError(`"${key}" deve ser AAAA-MM-DD.`);
-  return v;
-}
-
-function argMes(args: Record<string, unknown>, key: string, fallback?: string): string | undefined {
-  const v = args[key];
-  if (v === undefined || v === null || v === "") return fallback;
-  if (typeof v !== "string" || !RE_MES.test(v)) throw new ToolInputError(`"${key}" deve ser AAAA-MM.`);
-  return v;
-}
-
-const nomeMes = (ym: string) => `${MESES[Number(ym.slice(5, 7)) - 1]} de ${ym.slice(0, 4)}`;
-const diaSemana = (d: string) => SEMANAS[parseD(d).getDay()];
-
-/** Por que um dia não é útil (ou "útil"). */
-function tipoDoDia(state: State, d: string): string {
-  if (antesDoInicio(state, d)) return "antes do início do contrato";
-  if (state.feriados[d]) return `feriado: ${state.feriados[d]}`;
-  if (isFerias(state, d)) return "férias";
-  if (!isUtil(state, d)) return "folga (dia fora da jornada)";
-  return "útil";
-}
+import { ToolInputError, argDia, argMes, diaSemana, nomeMes, tipoDoDia, type McpTool } from "./shared";
 
 /** Uma linha do extrato: o que conta no saldo naquele dia, já calculado. */
 function linhaDoDia(ctx: Contexto, d: string) {
@@ -123,10 +76,11 @@ function base(ctx: Contexto) {
 const resumo: McpTool = {
   name: "resumo_do_banco",
   title: "Resumo do banco de horas",
+  kind: "read",
   description:
     "Visão geral AGORA: saldo geral do banco, saldo do mês, meta e trabalhado do mês, o dia de hoje (trabalhado, meta, quanto falta e a previsão de saída se o cronômetro estiver rodando) e quanto trabalhar por dia pra zerar o banco até o fim do mês. Use primeiro para perguntas como \"qual meu saldo?\", \"quanto falta hoje?\", \"que horas posso sair?\".",
   inputSchema: { type: "object", properties: {} },
-  async run(_args, username) {
+  async run(_args, { username }) {
     const ctx = await carregarContexto(username);
     const s = ctx.live;
     const ym = ctx.hoje.slice(0, 7);
@@ -186,6 +140,7 @@ const resumo: McpTool = {
 const saldoPorMes: McpTool = {
   name: "saldo_por_mes",
   title: "Saldo mês a mês",
+  kind: "read",
   description:
     "Linha do tempo do banco: para cada mês, meta, trabalhado, saldo do mês e o saldo ACUMULADO até ele (meses fechados usam a meta congelada no fechamento). Filtre com de/ate (AAAA-MM). Use para \"como foi meu saldo em março?\", \"em que mês fiquei negativo?\".",
   inputSchema: {
@@ -195,7 +150,7 @@ const saldoPorMes: McpTool = {
       ate: { type: "string", description: "Último mês (AAAA-MM). Opcional." },
     },
   },
-  async run(args, username) {
+  async run(args, { username }) {
     const de = argMes(args, "de");
     const ate = argMes(args, "ate");
     const ctx = await carregarContexto(username);
@@ -240,13 +195,14 @@ const saldoPorMes: McpTool = {
 const extrato: McpTool = {
   name: "extrato_do_mes",
   title: "Extrato do mês (dia a dia)",
+  kind: "read",
   description:
     "Dia a dia de um mês: tipo do dia (útil, feriado, férias, folga), meta, atestado, trabalhado e o saldo de cada dia que conta. Dia útil que já passou sem lançamento conta como débito (−meta). Padrão: mês atual.",
   inputSchema: {
     type: "object",
     properties: { mes: { type: "string", description: "Mês (AAAA-MM). Padrão: o atual." } },
   },
-  async run(args, username) {
+  async run(args, { username }) {
     const ctx = await carregarContexto(username);
     const ym = argMes(args, "mes", ctx.hoje.slice(0, 7))!;
     const s = ctx.live;
@@ -277,13 +233,14 @@ const extrato: McpTool = {
 const verDia: McpTool = {
   name: "ver_dia",
   title: "Detalhe de um dia",
+  kind: "read",
   description:
     "Um dia específico: tipo, meta, atestado, trabalhado, saldo do dia e (com o Clockify conectado) as tarefas e projetos em que as horas foram lançadas. Padrão: hoje.",
   inputSchema: {
     type: "object",
     properties: { data: { type: "string", description: "Dia (AAAA-MM-DD). Padrão: hoje." } },
   },
-  async run(args, username) {
+  async run(args, { username }) {
     const ctx = await carregarContexto(username);
     const d = argDia(args, "data", ctx.hoje);
     const linha = linhaDoDia(ctx, d);
@@ -308,10 +265,11 @@ const verDia: McpTool = {
 const cronometro: McpTool = {
   name: "cronometro",
   title: "Cronômetro do Clockify",
+  kind: "read",
   description:
     "O que está rodando agora no cronômetro do Clockify (descrição, projeto, tarefa, início e decorrido). Só observa: nunca inicia nem para nada.",
   inputSchema: { type: "object", properties: {} },
-  async run(_args, username) {
+  async run(_args, { username }) {
     const ctx = await carregarContexto(username);
     if (!ctx.clockifyOn) return { rodando: false, observacao: "Clockify não conectado." };
     return cronometroInfo(ctx) ?? { rodando: false };
@@ -323,6 +281,7 @@ const AGRUPAMENTOS = { projeto: "byProject", cliente: "byClient", tarefa: "byTas
 const relatorio: McpTool = {
   name: "relatorio_de_horas",
   title: "Horas por projeto, cliente ou tarefa",
+  kind: "read",
   description:
     "Relatório do Clockify num período, agrupado por projeto, cliente ou tarefa, com horas e percentual (inclui o cronômetro rodando). Padrão: mês atual, por projeto, 15 itens. Use para \"em que gastei mais tempo?\", \"quantas horas no projeto X este mês?\".",
   inputSchema: {
@@ -334,7 +293,7 @@ const relatorio: McpTool = {
       limite: { type: "integer", minimum: 1, maximum: 100, description: "Máximo de itens. Padrão: 15." },
     },
   },
-  async run(args, username) {
+  async run(args, { username }) {
     const ctx = await carregarContexto(username, { aoVivo: false });
     if (!ctx.clockifyOn) return { observacao: "Clockify não conectado: não há relatório por projeto." };
     const de = argDia(args, "de", `${ctx.hoje.slice(0, 7)}-01`);
@@ -370,6 +329,7 @@ const relatorio: McpTool = {
 const calendario: McpTool = {
   name: "calendario",
   title: "Jornada, feriados, férias e atestados",
+  kind: "read",
   description:
     "Configuração e calendário do banco: vigências de jornada (meta diária e dias da semana), início do contrato e do banco, feriados, períodos de férias, atestados e dias presenciais no período. Padrão: o ano atual.",
   inputSchema: {
@@ -379,7 +339,7 @@ const calendario: McpTool = {
       ate: { type: "string", description: "Fim (AAAA-MM-DD). Padrão: 31 de dezembro do ano atual." },
     },
   },
-  async run(args, username) {
+  async run(args, { username }) {
     const ctx = await carregarContexto(username, { aoVivo: false });
     const ano = ctx.hoje.slice(0, 4);
     const de = argDia(args, "de", `${ano}-01-01`);
@@ -411,12 +371,4 @@ const calendario: McpTool = {
   },
 };
 
-export const TOOLS: McpTool[] = [resumo, saldoPorMes, extrato, verDia, cronometro, relatorio, calendario];
-
-export const INSTRUCOES = [
-  "Banco de Horas: ferramentas SOMENTE LEITURA sobre o banco de horas do usuário que autorizou este acesso (horas vindas do Clockify comparadas com a jornada dele).",
-  "Comece por resumo_do_banco para saldo, o dia de hoje e quanto falta; saldo_por_mes para a linha do tempo; extrato_do_mes e ver_dia para o dia a dia; relatorio_de_horas para horas por projeto/cliente/tarefa; calendario para jornada, feriados, férias e atestados.",
-  "Todos os saldos e totais já vêm calculados pelo servidor com a regra do app (dia útil passado sem lançamento é débito; férias e feriados não contam; atestado abate a meta do dia). Repasse os números, não refaça as contas.",
-  "Durações vêm como HH:MM; saldos com sinal (+ crédito, − débito).",
-  "Nada pode ser alterado por aqui: lançamentos, férias, feriados e jornada se ajustam no app; o Clockify nunca é alterado.",
-].join("\n");
+export const LEITURA: McpTool[] = [resumo, saldoPorMes, extrato, verDia, cronometro, relatorio, calendario];

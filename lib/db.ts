@@ -69,10 +69,65 @@ export async function getState(username: string): Promise<State | null> {
   return u ? u.data : null;
 }
 
-export async function putState(username: string, data: State): Promise<State> {
+/* ---- gravação com controle de versão (`State.rev`) ----
+ * Ninguém sobrescreve o estado inteiro às cegas: a gravação só vale se a
+ * versão no banco ainda for a que o escritor leu. Quem perde a corrida relê
+ * (servidor) ou recebe 409 e reaplica a própria mudança (front, ver
+ * `lib/rebase.ts`). Escritas pontuais (MCP) usam `patchState`. */
+
+const revFilter = (rev: number) => (rev === 0 ? { $in: [0, null] } : rev);
+
+/**
+ * Grava `data` se a versão no banco ainda for `expectRev`; devolve o estado
+ * salvo (com `rev` + 1) ou null em conflito.
+ */
+export async function putStateIf(username: string, expectRev: number, data: State): Promise<State | null> {
+  const saved: State = { ...data, rev: expectRev + 1 };
+  const res = await (await users()).updateOne(
+    { _id: username, "data.rev": revFilter(expectRev) } as Record<string, unknown>,
+    { $set: { data: saved, updatedAt: new Date() } },
+  );
+  return res.matchedCount === 1 ? saved : null;
+}
+
+/**
+ * Ler → mudar → gravar com nova tentativa em conflito (sync, import, webhook,
+ * migração). `mutate` deve ser pura e rápida (busque o Clockify ANTES). Se a
+ * mudança não altera nada, não grava (nem soma versão).
+ */
+export async function updateState(
+  username: string,
+  mutate: (s: State) => void,
+  init: () => State,
+): Promise<State> {
+  for (let i = 0; i < 5; i++) {
+    const u = await getUser(username);
+    if (!u) throw new Error("Usuário não encontrado.");
+    const cur = u.data ?? init();
+    const rev = cur.rev ?? 0;
+    const next = structuredClone(cur);
+    mutate(next);
+    if (u.data && JSON.stringify(next) === JSON.stringify(cur)) return cur;
+    const saved = await putStateIf(username, rev, next);
+    if (saved) return saved;
+  }
+  throw new Error("O estado mudou várias vezes seguidas; tente de novo.");
+}
+
+/**
+ * Escrita pontual (MCP): `$set`/`$unset` de chaves de `data` + versão + 1,
+ * atômica, sem reescrever o resto. Ex.: set {"registros.2026-11-03": 28800}.
+ */
+export async function patchState(
+  username: string,
+  patch: { set?: Record<string, unknown>; unset?: string[] },
+): Promise<void> {
+  const $set: Record<string, unknown> = { updatedAt: new Date() };
+  for (const [k, v] of Object.entries(patch.set ?? {})) $set[`data.${k}`] = v;
+  const $unset: Record<string, ""> = {};
+  for (const k of patch.unset ?? []) $unset[`data.${k}`] = "";
   await (await users()).updateOne(
     { _id: username },
-    { $set: { data, updatedAt: new Date() } },
+    { $set, ...(Object.keys($unset).length ? { $unset } : {}), $inc: { "data.rev": 1 } },
   );
-  return data;
 }

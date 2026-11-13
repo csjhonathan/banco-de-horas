@@ -36,8 +36,9 @@ export function McpDialog({
         <DialogBody className="gap-5">
           <p className="text-xs text-muted-foreground">
             Conecte o Claude, o ChatGPT ou outra IA ao seu banco de horas e pergunte coisas como “qual meu saldo?”,
-            “que horas posso sair hoje?” ou “quanto trabalhei no projeto X este mês?”. É <b>somente leitura</b>: a
-            IA consulta, nunca altera nada (nem aqui, nem no Clockify). O login é o seu, por OAuth.
+            “que horas posso sair hoje?” ou “lança aqui as horas que estão no sistema da empresa”. A IA também pode
+            lançar horas, atestados, férias e dias presenciais, mas <b>sempre mostra uma prévia e só grava depois do
+            seu “sim”</b>. O Clockify nunca é alterado. O login é o seu, por OAuth.
           </p>
 
           <div>

@@ -76,6 +76,12 @@ export interface State {
    * quando os dias passam a ser úteis. Ausente = o histórico todo conta.
    */
   inicioBanco?: string | null;
+  /**
+   * Versão do estado (controle otimista). Toda gravação do estado inteiro só
+   * vale se `rev` ainda for a do servidor; cada gravação soma 1. Assim a tela,
+   * o sync e as escritas do MCP não se sobrescrevem. Ausente = 0 (legado).
+   */
+  rev?: number;
 }
 
 /** Documento do usuário no Mongo (um por usuário). */

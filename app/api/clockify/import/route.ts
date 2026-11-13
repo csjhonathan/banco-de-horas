@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getState, getUser, putState } from "@/lib/db";
+import { getUser, updateState } from "@/lib/db";
 import { currentUsername } from "@/lib/session";
 import { credsFrom } from "@/lib/user";
 import * as clockify from "@/lib/clockify";
@@ -26,23 +26,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Clockify nao configurado." }, { status: 400 });
   }
   const { start, end, apagarFora } = (await req.json().catch(() => ({}))) || {};
-  const state = (await getState(username)) || seed();
   const result = await clockify.syncRange(credsFrom(user), { start, end });
   // Limpa só os dias dentro da janela e aplica o que o Clockify devolveu
   // (chaves de result.registros são todas dentro de [start, end]). Datas são
   // "AAAA-MM-DD", então comparação lexicográfica = cronológica.
   const { start: from, end: to } = result.range;
   let removidosFora = 0;
-  for (const day of Object.keys(state.registros)) {
-    const dentro = day >= from && day <= to;
-    if (dentro) delete state.registros[day];
-    else if (apagarFora === true) {
-      delete state.registros[day];
-      removidosFora++;
-    }
-  }
-  Object.assign(state.registros, result.registros);
-  await putState(username, state);
+  const state = await updateState(
+    username,
+    (s) => {
+      removidosFora = 0; // a mutação pode rodar de novo num conflito
+      for (const day of Object.keys(s.registros)) {
+        const dentro = day >= from && day <= to;
+        if (dentro) delete s.registros[day];
+        else if (apagarFora === true) {
+          delete s.registros[day];
+          removidosFora++;
+        }
+      }
+      Object.assign(s.registros, result.registros);
+    },
+    seed,
+  );
   return NextResponse.json({
     state,
     days: result.days,

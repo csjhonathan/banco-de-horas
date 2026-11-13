@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { checkAuthorize, isOAuthError, readAuthorizeParams } from "@/lib/oauth/service";
-import { TOOLS } from "@/lib/mcp/tools";
+import { TOOLS } from "@/lib/mcp/catalog";
 import { ConsentCard } from "@/components/organisms/ConsentCard";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default async function AutorizarPage({ searchParams }: { searchParams: Se
         username={session.user.name}
         clientName={client.name}
         redirectHost={new URL(params.redirectUri).host}
-        tools={TOOLS.map((t) => t.title)}
+        tools={TOOLS.filter((t) => t.name !== "confirmar_acao").map((t) => ({ title: t.title, kind: t.kind }))}
       />
     );
   } catch (error) {

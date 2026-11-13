@@ -11,9 +11,12 @@ import type {
 
 export class ApiError extends Error {
   status?: number;
-  constructor(message: string, status?: number) {
+  /** Corpo da resposta de erro (ex.: o estado atual num 409). */
+  body?: any;
+  constructor(message: string, status?: number, body?: any) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -30,7 +33,7 @@ async function jfetch<T>(url: string, opts?: RequestInit): Promise<T> {
     /* corpo vazio */
   }
   if (r.status === 401) throw new ApiError(body?.error || "nao autenticado", 401);
-  if (!r.ok) throw new ApiError(body?.error || `${r.status} ${url}`, r.status);
+  if (!r.ok) throw new ApiError(body?.error || `${r.status} ${url}`, r.status, body);
   return body as T;
 }
 

@@ -4,7 +4,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import { authenticate } from "@/lib/oauth/service";
 import { OPEN_CORS, openPreflight, requestMeta, resourceMetadataUrl } from "@/lib/oauth/http";
 import { audit } from "@/lib/mcp/audit";
-import { INSTRUCOES, TOOLS, ToolInputError } from "@/lib/mcp/tools";
+import { INSTRUCOES, TOOLS, ToolInputError, inputParaAuditoria } from "@/lib/mcp/catalog";
 import { hitRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -14,6 +14,14 @@ export const OPTIONS = openPreflight;
 
 /** Por autorização: folga pra um agente, parede pra um loop descontrolado. */
 const RATE = { limit: 120, windowMs: 60_000 };
+
+/** O token de confirmação de uma prévia nunca vai pra auditoria. */
+function semToken(result: unknown): unknown {
+  if (result && typeof result === "object" && "token_de_confirmacao" in result) {
+    return { ...(result as Record<string, unknown>), token_de_confirmacao: "***" };
+  }
+  return result;
+}
 
 function withCors(res: Response): Response {
   const headers = new Headers(res.headers);
@@ -38,7 +46,8 @@ function unauthorized(req: Request, description: string): Response {
  * Bearer do OAuth 2.1 obrigatório (descoberta: /.well-known/oauth-protected-
  * resource); cada chamada fala por UMA pessoa através de UM app. Tudo é
  * auditado: cada mensagem JSON-RPC e a entrada/saída completas de cada
- * ferramenta. Ferramentas SOMENTE LEITURA.
+ * ferramenta (tokens de confirmação mascarados). Escritas só no estado do app,
+ * sempre em dois passos (prévia → confirmar_acao); o Clockify nunca é alterado.
  */
 export async function POST(req: Request) {
   const meta = requestMeta(req);
@@ -84,23 +93,31 @@ export async function POST(req: Request) {
       title: t.title,
       description: t.description,
       inputSchema: t.inputSchema,
-      annotations: { title: t.title, readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: {
+        title: t.title,
+        readOnlyHint: t.kind === "read",
+        // escritas só preparam (prévia + token); quem grava é confirmar_acao, depois do "sim"
+        destructiveHint: t.name === "confirmar_acao",
+        idempotentHint: t.kind === "read",
+        openWorldHint: false,
+      },
     })),
   }));
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const started = Date.now();
     const name = request.params.name;
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
+    const input = inputParaAuditoria(name, args);
     const tool = TOOLS.find((t) => t.name === name);
     if (!tool) {
       const text = `Ferramenta desconhecida: ${name}`;
-      await audit({ channel: "mcp", method: "tools/call", tool: name, ...who, input: args, ok: false, error: text });
+      await audit({ channel: "mcp", method: "tools/call", tool: name, ...who, input, ok: false, error: text });
       return { content: [{ type: "text" as const, text }], isError: true };
     }
     try {
-      const result = await tool.run(args, principal.username);
+      const result = await tool.run(args, { username: principal.username, grantId: principal.grantId, clientId: principal.clientId });
       await audit({
-        channel: "mcp", method: "tools/call", tool: name, ...who, input: args, output: result, ok: true,
+        channel: "mcp", method: "tools/call", tool: name, ...who, input, output: semToken(result), ok: true,
         durationMs: Date.now() - started,
       });
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 1) }], isError: false };
@@ -109,7 +126,7 @@ export async function POST(req: Request) {
       const text = known ? error.message : `Falha ao executar ${name}: ${error instanceof Error ? error.message : error}`;
       if (!known) console.error(`[mcp] ${name}`, error);
       await audit({
-        channel: "mcp", method: "tools/call", tool: name, ...who, input: args, ok: false, error: text,
+        channel: "mcp", method: "tools/call", tool: name, ...who, input, ok: false, error: text,
         durationMs: Date.now() - started,
       });
       return { content: [{ type: "text" as const, text }], isError: true };

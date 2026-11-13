@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findUserByClockify, getState, putState } from "@/lib/db";
+import { findUserByClockify, updateState } from "@/lib/db";
 import { credsFrom, secretList } from "@/lib/user";
 import * as clockify from "@/lib/clockify";
 import { seed } from "@/lib/seed";
@@ -39,10 +39,14 @@ export async function POST(req: Request) {
   if (!day) return NextResponse.json({ ok: true, skipped: "sem data" });
 
   const { seconds } = await clockify.recomputeDay(creds, day);
-  const state = (await getState(user._id)) || seed();
-  if (seconds > 0) state.registros[day] = seconds;
-  else delete state.registros[day];
-  await putState(user._id, state);
+  await updateState(
+    user._id,
+    (s) => {
+      if (seconds > 0) s.registros[day] = seconds;
+      else delete s.registros[day];
+    },
+    seed,
+  );
 
   console.log(`[webhook] ${user._id} · ${day} -> ${seconds}s`);
   return NextResponse.json({ ok: true, day, seconds });

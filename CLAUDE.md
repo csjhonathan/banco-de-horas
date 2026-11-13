@@ -224,12 +224,23 @@ Uma coleção `usuarios`, um documento por usuário (inalterado da versão anter
 - **Persistência otimista** (`usePersistence`): mutações do usuário chamam `commit`
   (agenda save com debounce); dados vindos do servidor usam `replaceFromServer` (não
   re-salvam).
+- **Versão do estado (`State.rev`) — ninguém sobrescreve às cegas.** Toda gravação do
+  estado inteiro é condicional à versão lida (`putStateIf` em `lib/db.ts`) e soma 1.
+  No servidor, ler→mudar→gravar usa `updateState` (tenta de novo no conflito; não grava
+  se nada mudou) — sync, import, webhook, reset e a migração do `GET /api/state`. O
+  `PUT /api/state` com versão velha devolve **409 + o estado atual**; o front reaplica
+  as próprias mudanças por cima com `rebaseState` (`lib/rebase.ts`, junção de 3 vias
+  por chave de dia/campo, base = último estado confirmado) e salva de novo. Escrita
+  pontual (MCP) usa `patchState` (`$set`/`$unset` + `$inc rev`). **Nunca volte a usar
+  gravação incondicional do `data` inteiro.**
 - **Env essenciais**: `MONGO_URI` e `AUTH_SECRET` (ver `.env.example`). A chave do
   Clockify **não** vai no `.env` — cada usuário cadastra a dela pela tela.
 
-## Servidor MCP (IA) — SOMENTE LEITURA
+## Servidor MCP (IA)
 
 Porte do MCP do Pista Livre, enxugado: só o servidor MCP (sem chat/agente interno).
+Uso pretendido pelo dono: junto com o MCP da empresa, a IA lê os apontamentos de lá e
+**lança as horas aqui** (o banco de horas fica independente da empresa).
 
 - **`/api/mcp`**: Streamable HTTP **stateless** (`WebStandardStreamableHTTPServerTransport`,
   respostas JSON), `@modelcontextprotocol/sdk` com `Server` de baixo nível. Sem Bearer →
@@ -245,15 +256,24 @@ Porte do MCP do Pista Livre, enxugado: só o servidor MCP (sem chat/agente inter
   sem sessão → `/login?callbackUrl=…`, que só aceita caminho interno). A decisão vai
   em `POST /api/oauth/consent` (sessão do NextAuth). `/autorizar` não abre em iframe.
 - **Issuer/endereço**: `APP_URL` ou deduzido do request (`publicOrigin`).
-- **Ferramentas** (`lib/mcp/tools.ts`, todas `readOnlyHint`): `resumo_do_banco`,
-  `saldo_por_mes`, `extrato_do_mes`, `ver_dia`, `cronometro`, `relatorio_de_horas`,
-  `calendario`. As contas saem de `lib/horas.ts` no servidor (o modelo só repassa).
-  `lib/mcp/contexto.ts` monta uma camada **ao vivo só em memória**: mês corrente do
-  Clockify em merge (igual ao `/sync`) + cronômetro somado em hoje. **O MCP nunca grava**
-  (nem no state, nem no Clockify) — não acrescente escrita sem decisão do dono.
+- **Catálogo** (`lib/mcp/catalog.ts` = `leitura.ts` + `escrita.ts` + `confirmar_acao`;
+  tipos/helpers em `shared.ts`). As contas saem de `lib/horas.ts` no servidor (o modelo
+  só repassa).
+  - **Leitura**: `resumo_do_banco`, `saldo_por_mes`, `extrato_do_mes`, `ver_dia`,
+    `cronometro`, `relatorio_de_horas`, `calendario`. `lib/mcp/contexto.ts` monta uma
+    camada **ao vivo só em memória**: mês corrente do Clockify em merge (igual ao
+    `/sync`) + cronômetro somado em hoje.
+  - **Escrita** (só no state do app — **o Clockify nunca é alterado**): `lancar_horas`
+    (vários dias; itens do mesmo dia são SOMADOS no servidor; duração ou início/fim;
+    `modo` substituir|somar), `apagar_lancamentos`, `registrar_atestado`,
+    `marcar_ferias`, `marcar_presencial`. **Sempre em dois passos** (`lib/mcp/acoes.ts`):
+    a ferramenta calcula a prévia (antes → depois + efeito no saldo) e guarda a ação em
+    `mcp_acoes`; só `confirmar_acao {token}` grava (`patchState`). Token de uso único,
+    10 min, preso à mesma autorização; só o hash no banco. Lançamento manual num dia que
+    o Clockify também tem pode ser sobrescrito pelo sync/webhook/import (a prévia avisa).
 - **Auditoria** (`lib/mcp/audit.ts`, coleção `mcp_audit`, TTL 90 dias): toda mensagem
   JSON-RPC, entrada/saída de cada ferramenta (cortadas em 20 mil caracteres), eventos
-  do OAuth; segredos sempre `***`. A UI ("IA" na TopBar → `McpDialog`) mostra endereço,
+  do OAuth; segredos sempre `***` (inclusive o token de confirmação). A UI ("IA" na TopBar → `McpDialog`) mostra endereço,
   passo a passo por cliente, apps autorizados (revogar) e últimas consultas.
 - Ao criar dado novo no state, avalie expor numa ferramenta (e na `INSTRUCOES`).
 

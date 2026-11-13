@@ -1,11 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Eye, ShieldCheck } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Check, Eye, PencilLine, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LogoMark, Wordmark } from "@/components/molecules/Logo";
 import { API } from "@/lib/api";
+
+function ToolGroup({ icon, label, items }: { icon: ReactNode; label: string; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="mt-4 rounded-md border bg-muted/40 p-3">
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+        {icon} {label}
+      </div>
+      <ul className="flex flex-col gap-1 text-xs">
+        {items.map((t) => (
+          <li key={t} className="flex items-center gap-1.5">
+            <Check className="size-3.5 text-credit" /> {t}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /**
  * Consentimento do OAuth do MCP: qual app pede acesso, pra onde o código volta
@@ -15,7 +33,13 @@ import { API } from "@/lib/api";
 export function ConsentCard(
   props:
     | { error: string; username: string }
-    | { query: Record<string, string>; username: string; clientName: string; redirectHost: string; tools: string[] },
+    | {
+        query: Record<string, string>;
+        username: string;
+        clientName: string;
+        redirectHost: string;
+        tools: { title: string; kind: "read" | "write" }[];
+      },
 ) {
   const [busy, setBusy] = useState<"approve" | "deny" | null>(null);
   const [error, setError] = useState("");
@@ -56,23 +80,21 @@ export function ConsentCard(
               Conta <b>@{props.username}</b> · volta para <code className="num">{props.redirectHost}</code>
             </p>
 
-            <div className="mt-5 rounded-md border bg-muted/40 p-3">
-              <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                <Eye className="size-3.5" /> Poderá consultar
-              </div>
-              <ul className="flex flex-col gap-1 text-xs">
-                {props.tools.map((t) => (
-                  <li key={t} className="flex items-center gap-1.5">
-                    <Check className="size-3.5 text-credit" /> {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ToolGroup
+              icon={<Eye className="size-3.5" />}
+              label="Poderá consultar"
+              items={props.tools.filter((t) => t.kind === "read").map((t) => t.title)}
+            />
+            <ToolGroup
+              icon={<PencilLine className="size-3.5" />}
+              label="Poderá alterar, com a sua confirmação"
+              items={props.tools.filter((t) => t.kind === "write").map((t) => t.title)}
+            />
 
             <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
               <ShieldCheck className="mt-px size-3.5 shrink-0" />
-              Somente leitura: nada é alterado no app nem no Clockify. Dá pra revogar a qualquer momento em
-              “IA (MCP)”.
+              Toda alteração mostra uma prévia e só é gravada depois do seu “sim”. O Clockify nunca é alterado. Dá
+              pra revogar a qualquer momento em “IA”.
             </p>
 
             {error && <p className="mt-3 text-xs font-semibold text-destructive">{error}</p>}
